@@ -5,14 +5,19 @@ import 'package:jg_business/features/calendar/data/models/calendar_events_respon
 import 'package:jg_business/features/calendar/presentation/mappers/calendar_event_mapper.dart';
 import 'package:jg_business/features/calendar/presentation/screens/calendar_day_screen.dart';
 import 'package:jg_business/features/calendar/presentation/screens/calendar_event_screen.dart';
+import 'package:jg_business/shared/services/notification_service.dart';
 
 enum CalendarDisplayMode { month, week }
 
 class CalendarController extends GetxController {
-  CalendarController({required GoogleCalendarRemoteDataSource remoteDataSource})
-    : _remoteDataSource = remoteDataSource;
+  CalendarController({
+    required GoogleCalendarRemoteDataSource remoteDataSource,
+    required NotificationService notificationService,
+  }) : _remoteDataSource = remoteDataSource,
+       _notificationService = notificationService;
 
   final GoogleCalendarRemoteDataSource _remoteDataSource;
+  final NotificationService _notificationService;
 
   final _isLoading = false.obs;
   bool get isLoading => _isLoading.value;
@@ -62,6 +67,7 @@ class CalendarController extends GetxController {
       calendarEventController.addAll(
         CalendarEventMapper.toCalendarViewEvents(result),
       );
+      await _notificationService.resyncCalendarNotifications(result);
     } catch (e) {
       print('e.toString() : ${e.toString()}');
     } finally {

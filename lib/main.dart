@@ -4,10 +4,18 @@ import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:jg_business/app/routes/app_pages.dart';
 import 'package:jg_business/app/routes/app_routes.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
-void main() async {
+Future<void> _initTimezone() async {
+  tz.initializeTimeZones();
+  tz.setLocalLocation(tz.getLocation('Asia/Tokyo'));
+}
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('ja_JP');
+  await _initTimezone();
 
   runApp(const JgBusinessApp());
 }
@@ -20,10 +28,7 @@ class JgBusinessApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'Jg Business',
       locale: const Locale('ja', 'JP'),
-      supportedLocales: const [
-        Locale('ja', 'JP'),
-        Locale('en', 'US'),
-      ],
+      supportedLocales: const [Locale('ja', 'JP'), Locale('en', 'US')],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
