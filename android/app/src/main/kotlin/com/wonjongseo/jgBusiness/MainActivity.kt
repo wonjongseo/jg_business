@@ -1,4 +1,4 @@
-package com.example.jg_business
+package com.wonjongseo.jgBusiness
 
 import io.flutter.embedding.android.FlutterActivity
 
