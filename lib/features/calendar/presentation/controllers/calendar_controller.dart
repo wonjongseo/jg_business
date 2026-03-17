@@ -1,13 +1,11 @@
 import 'package:calendar_view/calendar_view.dart';
 import 'package:get/get.dart';
+import 'package:jg_business/app/routes/app_routes.dart';
 import 'package:jg_business/features/calendar/data/datasources/google_calendar_remote_data_source.dart';
 import 'package:jg_business/features/calendar/data/models/calendar_events_response.dart';
 import 'package:jg_business/features/calendar/presentation/mappers/calendar_event_mapper.dart';
-import 'package:jg_business/features/calendar/presentation/screens/calendar_day_screen.dart';
 import 'package:jg_business/features/calendar/presentation/screens/calendar_event_screen.dart';
 import 'package:jg_business/shared/services/notification_service.dart';
-
-enum CalendarDisplayMode { month, week }
 
 class CalendarController extends GetxController {
   CalendarController({
@@ -22,17 +20,69 @@ class CalendarController extends GetxController {
   final _isLoading = false.obs;
   bool get isLoading => _isLoading.value;
 
+  final _isConnected = false.obs;
+  bool get isConnected => _isConnected.value;
+
   final _events = <CalendarEvent>[].obs;
+  List<CalendarEvent> get events => _events;
+
+  // Home and calendar summary panels both depend on the same "what matters now"
+  // interpretation: ongoing meeting first, otherwise the next upcoming one.
+  CalendarEvent? get currentOrNextEvent {
+    final now = DateTime.now();
+
+    for (final event in _events) {
+      final end = event.end?.dateTime ?? event.end?.date;
+      if (end == null || !end.isBefore(now)) {
+        return event;
+      }
+    }
+
+    return null;
+  }
 
   final calendarEventController = EventController<CalendarEvent>();
 
-  final _displayMode = CalendarDisplayMode.month.obs;
-  CalendarDisplayMode get displayMode => _displayMode.value;
-
   final focusedDay = DateTime.now().obs;
 
-  void changeDisplayMode(CalendarDisplayMode mode) {
-    _displayMode.value = mode;
+  List<CalendarEvent> get todayEvents {
+    final today = DateTime.now();
+    return _events.where((event) => occursOnDate(event, today)).toList();
+  }
+
+  List<CalendarEvent> get upcomingEvents {
+    final now = DateTime.now();
+    return _events.where((event) {
+      final start = event.start?.dateTime ?? event.start?.date;
+      final end = event.end?.dateTime ?? event.end?.date;
+      if (start == null && end == null) return false;
+      return (end ?? start) != null && !(end ?? start)!.isBefore(now);
+    }).take(6).toList();
+  }
+
+  List<CalendarEvent> get focusedDayEvents {
+    return _events.where((event) => occursOnDate(event, focusedDay.value)).toList();
+  }
+
+  bool isOngoing(CalendarEvent event) {
+    final now = DateTime.now();
+    final start = event.start?.dateTime ?? event.start?.date;
+    final end = event.end?.dateTime ?? event.end?.date;
+
+    if (start == null || end == null) return false;
+    return !start.isAfter(now) && end.isAfter(now);
+  }
+
+  bool occursOnDate(CalendarEvent event, DateTime date) {
+    final start = event.start?.dateTime ?? event.start?.date;
+    final end = event.end?.dateTime ?? event.end?.date ?? start;
+    if (start == null || end == null) return false;
+
+    final startDate = DateTime(start.year, start.month, start.day);
+    final endDate = DateTime(end.year, end.month, end.day);
+    final targetDate = DateTime(date.year, date.month, date.day);
+
+    return !targetDate.isBefore(startDate) && !targetDate.isAfter(endDate);
   }
 
   void changeFocusedDay(DateTime date) {
@@ -53,13 +103,17 @@ class CalendarController extends GetxController {
   void onInit() async {
     super.onInit();
     await _remoteDataSource.initialize();
-    fetchCalendar();
+    _isConnected.value = _remoteDataSource.isConnected;
+    await fetchCalendar(interactive: false);
   }
 
-  Future<void> fetchCalendar() async {
+  Future<void> fetchCalendar({bool interactive = true}) async {
     try {
       _isLoading.value = true;
-      final result = await _remoteDataSource.fetchEvents();
+      final result = await _remoteDataSource.fetchEvents(
+        interactive: interactive,
+      );
+      _isConnected.value = _remoteDataSource.isConnected;
 
       _events.assignAll(result);
 
@@ -75,20 +129,33 @@ class CalendarController extends GetxController {
     }
   }
 
-  void openDayView(DateTime date) {
-    focusedDay.value = date;
-    Get.toNamed(CalendarDayScreen.name, arguments: date);
+  void openEventDetail(CalendarEvent event) {
+    Get.toNamed(
+      AppRoutes.calendarEventDetail,
+      arguments: {'event': event},
+    );
   }
 
   void goToEventScreen({
     List<CalendarEventData<CalendarEvent>>? events,
     required DateTime date,
   }) {
-    final selectedEvent = events?.firstOrNull?.event;
+    final selectedEvent = events != null && events.isNotEmpty
+        ? events.first.event
+        : null;
 
     Get.toNamed(
       CalendarEventScreen.name,
       arguments: {'event': selectedEvent, 'date': date},
+    );
+  }
+
+  void openEventEditor(CalendarEvent event) {
+    final date =
+        event.start?.dateTime ?? event.start?.date ?? focusedDay.value;
+    Get.toNamed(
+      CalendarEventScreen.name,
+      arguments: {'event': event, 'date': date},
     );
   }
 
@@ -98,41 +165,28 @@ class CalendarController extends GetxController {
     super.onClose();
   }
 
-  Future<void> reauthenticate() async {
-    await _remoteDataSource.reauthenticate();
-    await fetchCalendar();
+  Future<void> connectCalendar() async {
+    try {
+      // Connection CTA should switch the UI into a loading state immediately.
+      _isLoading.value = true;
+      await _remoteDataSource.reauthenticate();
+      _isConnected.value = _remoteDataSource.isConnected;
+
+      if (_isConnected.value) {
+        final result = await _remoteDataSource.fetchEvents(interactive: false);
+        _events.assignAll(result);
+
+        calendarEventController.removeWhere((event) => true);
+        calendarEventController.addAll(
+          CalendarEventMapper.toCalendarViewEvents(result),
+        );
+        await _notificationService.resyncCalendarNotifications(result);
+      }
+    } catch (e) {
+      print('connectCalendar error: ${e.toString()}');
+    } finally {
+      _isLoading.value = false;
+    }
   }
 
-  Future<void> addSampleEvent() async {
-    final start = DateTime.now().add(const Duration(hours: 1));
-    final end = start.add(const Duration(hours: 1));
-
-    await _remoteDataSource.createEvent(
-      summary: '새 미팅',
-      description: '앱에서 추가한 일정',
-      location: '종각',
-      start: start,
-      end: end,
-    );
-
-    await fetchCalendar();
-  }
-
-  Future<void> editEvent(CalendarEvent event) async {
-    if (event.id == null) return;
-
-    final start = (event.start?.dateTime ?? DateTime.now()).add(
-      const Duration(hours: 1),
-    );
-    final end = (event.end?.dateTime ?? start).add(const Duration(hours: 1));
-
-    await _remoteDataSource.updateEvent(
-      eventId: event.id!,
-      summary: '${event.summary ?? '일정'} 수정됨',
-      start: start,
-      end: end,
-    );
-
-    await fetchCalendar();
-  }
 }

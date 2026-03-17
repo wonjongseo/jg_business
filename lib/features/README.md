@@ -4,7 +4,7 @@
 
 各 feature は基本的に以下で分ける。
 
-- `data`: API、ローカル DB、DTO、repository 実装
+- `data`: API、Firestore、DTO、repository 実装
 - `domain`: entity、repository 契約、use case
 - `presentation`: controller、binding、screen、widget
 

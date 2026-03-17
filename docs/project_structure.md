@@ -23,7 +23,6 @@ lib/
     telephony/
   shared/
     constants/
-    database/
     dto/
     enums/
     errors/
@@ -54,7 +53,7 @@ firebase/
 ## 役割
 
 - `features/auth`: Firebase Auth、Google サインイン連携、Okta SSO。
-- `features/calendar`: Google Calendar CRUD、同期、ローカルキャッシュ。
+- `features/calendar`: Google Calendar CRUD、同期、面談導線。
 - `features/meeting`: 面談記録フォーム、要約、次回アクション。
 - `features/client`: 顧客・会社・連絡先管理。
 - `features/business_card`: 名刺 OCR と連絡先抽出。

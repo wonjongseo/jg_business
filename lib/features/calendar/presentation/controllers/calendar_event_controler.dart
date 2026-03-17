@@ -256,7 +256,9 @@ class CalendarEventControler extends GetxController {
       }
 
       if (Get.isRegistered<CalendarController>()) {
-        await Get.find<CalendarController>().fetchCalendar();
+        // Saving from the editor should refresh calendar/home state immediately
+        // without forcing another interactive sign-in prompt.
+        await Get.find<CalendarController>().fetchCalendar(interactive: false);
       }
       Get.back<void>();
     } finally {
@@ -272,7 +274,7 @@ class CalendarEventControler extends GetxController {
       isSaving.value = true;
       await _remoteDataSource.deleteEvent(eventId);
       if (Get.isRegistered<CalendarController>()) {
-        await Get.find<CalendarController>().fetchCalendar();
+        await Get.find<CalendarController>().fetchCalendar(interactive: false);
       }
       Get.back<void>();
     } finally {

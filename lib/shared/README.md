@@ -3,7 +3,6 @@
 複数 feature で共有する共通要素。
 
 - `constants`: 共通キー・固定値
-- `database`: ローカル DB 共通設定
 - `dto`: 汎用転送モデル
 - `enums`: 共通 enum
 - `errors`: 共通エラー型

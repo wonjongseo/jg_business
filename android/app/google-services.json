@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "118577179246",
+    "project_id": "jgbusiness-147a8",
+    "storage_bucket": "jgbusiness-147a8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:118577179246:android:726a7b5abe5a5a3e9d947f",
+        "android_client_info": {
+          "package_name": "com.wonjongseo.jgBusiness"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhBdOucwpM_fsaWyL8Y7s6wLQxa1lHbyM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

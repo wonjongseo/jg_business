@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jg_business/shared/theme/app_tokens.dart';
 
 class CustomTextFormField extends StatelessWidget {
   const CustomTextFormField({
@@ -69,7 +70,7 @@ class CustomTextFormField extends StatelessWidget {
               label!,
               style: theme.textTheme.labelLarge?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF111827),
+                color: AppColors.inkStrong,
               ),
             ),
           ),
@@ -94,7 +95,7 @@ class CustomTextFormField extends StatelessWidget {
           style: theme.textTheme.bodyLarge?.copyWith(
             fontSize: 15,
             fontWeight: FontWeight.w500,
-            color: const Color(0xFF111827),
+            color: AppColors.inkStrong,
           ),
           decoration: InputDecoration(
             hintText: hintText,
@@ -103,8 +104,8 @@ class CustomTextFormField extends StatelessWidget {
             filled: true,
             fillColor:
                 enabled
-                    ? (fillColor ?? const Color(0xFFF7F7F8))
-                    : const Color(0xFFF1F2F4),
+                    ? (fillColor ?? AppColors.surfaceSoft)
+                    : AppColors.surfaceDisabled,
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,
             counterText: '',
@@ -113,7 +114,7 @@ class CustomTextFormField extends StatelessWidget {
               fontWeight: FontWeight.w400,
             ),
             helperStyle: theme.textTheme.bodySmall?.copyWith(
-              color: const Color(0xFF6B7280),
+              color: AppColors.mutedLight,
             ),
             errorStyle: theme.textTheme.bodySmall?.copyWith(
               color: colorScheme.error,
@@ -124,7 +125,7 @@ class CustomTextFormField extends StatelessWidget {
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             border: _border(Colors.grey),
             enabledBorder: _border(Colors.grey),
-            focusedBorder: _border(const Color(0xFF111827), width: 1.4),
+            focusedBorder: _border(AppColors.inkStrong, width: 1.4),
             errorBorder: _border(colorScheme.error),
             focusedErrorBorder: _border(colorScheme.error, width: 1.4),
             disabledBorder: _border(const Color(0x00000000)),

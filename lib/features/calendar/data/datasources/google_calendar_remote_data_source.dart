@@ -11,13 +11,17 @@ class GoogleCalendarRemoteDataSource {
   final GoogleAuthRemoteDataSource _authRemoteDataSource;
   final Dio _dio = Dio();
 
+  bool get isConnected => _authRemoteDataSource.isSignedIn;
+
   Future<void> initialize() {
     return _authRemoteDataSource.initialize();
   }
 
-  Future<List<CalendarEvent>> fetchEvents() async {
+  Future<List<CalendarEvent>> fetchEvents({bool interactive = true}) async {
     try {
-      final headers = await _authRemoteDataSource.getAuthorizationHeaders();
+      final headers = await _authRemoteDataSource.getAuthorizationHeaders(
+        interactive: interactive,
+      );
       if (headers == null || headers.isEmpty) return [];
 
       final response = await _dio.get(
@@ -26,7 +30,11 @@ class GoogleCalendarRemoteDataSource {
         queryParameters: {
           'singleEvents': true,
           'orderBy': 'startTime',
-          'timeMin': DateTime.now().toUtc().toIso8601String(),
+          'timeMin': DateTime(
+            DateTime.now().year,
+            DateTime.now().month,
+            DateTime.now().day,
+          ).toUtc().toIso8601String(),
           // 'maxResults': 12,
         },
       );

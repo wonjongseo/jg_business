@@ -8,6 +8,9 @@ class GoogleAuthRemoteDataSource {
   GoogleSignInAccount? _currentUser;
   bool _isInitialized = false;
 
+  bool get isSignedIn => _currentUser != null;
+  String? get currentUserEmail => _currentUser?.email;
+
   Future<void> initialize() async {
     if (_isInitialized) return;
 
@@ -33,9 +36,10 @@ class GoogleAuthRemoteDataSource {
 
   Future<Map<String, String>?> getAuthorizationHeaders({
     List<String> scopes = const [calendarScope],
+    bool interactive = true,
   }) async {
     await initialize();
-    await _signInIfNeeded(scopes);
+    await _signInIfNeeded(scopes, interactive: interactive);
 
     final user = _currentUser;
     if (user == null) return <String, String>{};
@@ -52,11 +56,15 @@ class GoogleAuthRemoteDataSource {
     List<String> scopes = const [calendarScope],
   }) async {
     await signOut();
-    await _signInIfNeeded(scopes);
+    await _signInIfNeeded(scopes, interactive: true);
   }
 
-  Future<void> _signInIfNeeded(List<String> scopes) async {
+  Future<void> _signInIfNeeded(
+    List<String> scopes, {
+    required bool interactive,
+  }) async {
     if (_currentUser != null) return;
+    if (!interactive) return;
     _currentUser = await _signIn.authenticate(scopeHint: scopes);
   }
 }
