@@ -9,6 +9,7 @@ class CalendarDayScreen extends GetView<CalendarController> {
 
   const CalendarDayScreen({super.key, required this.date});
   final DateTime date;
+
   double _initialScrollOffset() {
     const heightPerMinute = 1.15;
     final now = DateTime.now();
@@ -71,7 +72,6 @@ class CalendarDayScreen extends GetView<CalendarController> {
             ),
           );
         },
-        // timeLineBuilder: (date) => Text(date.hour.toString()),
       ),
     );
   }
