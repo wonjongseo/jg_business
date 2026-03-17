@@ -47,6 +47,7 @@ class CalendarEvent {
     required this.location,
     required this.creatorEmail,
     required this.organizerEmail,
+    required this.attendees,
     required this.start,
     required this.end,
   });
@@ -61,6 +62,7 @@ class CalendarEvent {
   final String? location;
   final String? creatorEmail;
   final String? organizerEmail;
+  final List<CalendarAttendee> attendees;
   final EventDateTime? start;
   final EventDateTime? end;
 
@@ -84,6 +86,13 @@ class CalendarEvent {
           (json['creator'] as Map<String, dynamic>?)?['email'] as String?,
       organizerEmail:
           (json['organizer'] as Map<String, dynamic>?)?['email'] as String?,
+      attendees:
+          (json['attendees'] as List<dynamic>? ?? [])
+              .map(
+                (item) =>
+                    CalendarAttendee.fromJson(item as Map<String, dynamic>),
+              )
+              .toList(),
       start:
           json['start'] != null
               ? EventDateTime.fromJson(json['start'] as Map<String, dynamic>)
@@ -101,6 +110,36 @@ class CalendarEvent {
   }
 }
 
+class CalendarAttendee {
+  const CalendarAttendee({
+    required this.email,
+    required this.displayName,
+    required this.responseStatus,
+  });
+
+  final String? email;
+  final String? displayName;
+  final String? responseStatus;
+
+  String get label => displayName?.trim().isNotEmpty == true
+      ? displayName!
+      : (email ?? '');
+
+  factory CalendarAttendee.fromJson(Map<String, dynamic> json) {
+    return CalendarAttendee(
+      email: json['email'] as String?,
+      displayName: json['displayName'] as String?,
+      responseStatus: json['responseStatus'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toRequestJson() {
+    return {
+      if (email != null) 'email': email,
+    };
+  }
+}
+
 class EventDateTime {
   const EventDateTime({
     required this.dateTime,
@@ -115,15 +154,19 @@ class EventDateTime {
   bool get isAllDay => date != null && dateTime == null;
 
   factory EventDateTime.fromJson(Map<String, dynamic> json) {
+    DateTime? parseToLocal(String key) {
+      final value = json[key] as String?;
+      if (value == null) return null;
+
+      final parsed = DateTime.tryParse(value);
+      if (parsed == null) return null;
+
+      return parsed.toLocal();
+    }
+
     return EventDateTime(
-      dateTime:
-          json['dateTime'] != null
-              ? DateTime.tryParse(json['dateTime'] as String)
-              : null,
-      date:
-          json['date'] != null
-              ? DateTime.tryParse(json['date'] as String)
-              : null,
+      dateTime: parseToLocal('dateTime'),
+      date: parseToLocal('date'),
       timeZone: json['timeZone'] as String?,
     );
   }
