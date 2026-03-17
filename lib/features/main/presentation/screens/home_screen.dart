@@ -1,10 +1,12 @@
+/// 오늘의 영업 흐름을 요약해서 보여주는 홈 화면이다.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:jg_business/features/main/presentation/screens/widgets/home_hero_summary_card.dart';
 import 'package:jg_business/features/main/presentation/screens/widgets/home_next_meeting_card.dart';
+import 'package:jg_business/features/main/presentation/screens/widgets/home_pending_records_card.dart';
+import 'package:jg_business/features/main/presentation/screens/widgets/home_recent_records_card.dart';
 import 'package:jg_business/features/main/presentation/screens/widgets/home_section_header.dart';
-import 'package:jg_business/shared/theme/app_tokens.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -33,6 +35,20 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     const HomeNextMeetingCard(),
                     const SizedBox(height: 28),
+                    const HomeSectionHeader(
+                      title: '記録待ち',
+                      actionLabel: '確認する',
+                    ),
+                    const SizedBox(height: 10),
+                    const HomePendingRecordsCard(),
+                    const SizedBox(height: 28),
+                    const HomeSectionHeader(
+                      title: '最近の記録',
+                      actionLabel: '詳細を見る',
+                    ),
+                    const SizedBox(height: 10),
+                    const HomeRecentRecordsCard(),
+                    const SizedBox(height: 28),
                   ]),
                 ),
               ),
@@ -49,27 +65,9 @@ class _MeetingSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.isRegistered<CalendarController>()
-        ? Get.find<CalendarController>()
-        : null;
-
-    if (controller == null) {
-      return const HomeSectionHeader(
-        title: '次の面談',
-        actionLabel: 'カレンダーを開く',
-      );
-    }
-
-    return Obx(() {
-      final event = controller.currentOrNextEvent;
-      final title = event != null && controller.isOngoing(event)
-          ? '進行中の面談'
-          : '次の面談';
-
-      return HomeSectionHeader(
-        title: title,
-        actionLabel: 'カレンダーを開く',
-      );
-    });
+    return const HomeSectionHeader(
+      title: '次の面談',
+      actionLabel: 'カレンダーを開く',
+    );
   }
 }

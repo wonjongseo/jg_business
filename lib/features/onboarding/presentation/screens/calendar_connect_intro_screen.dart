@@ -1,3 +1,4 @@
+/// Google Calendar 연동의 필요성과 스킵 가능 여부를 안내하는 화면이다.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/app/routes/app_routes.dart';

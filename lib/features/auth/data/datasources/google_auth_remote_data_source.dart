@@ -1,7 +1,9 @@
+/// Google 로그인과 Calendar scope 인증 상태를 다루는 데이터 소스다.
 import 'package:google_sign_in/google_sign_in.dart';
 
 class GoogleAuthRemoteDataSource {
   static const calendarScope = 'https://www.googleapis.com/auth/calendar';
+  static const sheetsScope = 'https://www.googleapis.com/auth/spreadsheets';
 
   final GoogleSignIn _signIn = GoogleSignIn.instance;
 
@@ -10,6 +12,28 @@ class GoogleAuthRemoteDataSource {
 
   bool get isSignedIn => _currentUser != null;
   String? get currentUserEmail => _currentUser?.email;
+  String? get currentUserDisplayName => _currentUser?.displayName;
+  String get currentUserId {
+    final email = _currentUser?.email;
+    if (email != null && email.trim().isNotEmpty) {
+      return email.trim();
+    }
+    return 'local-user';
+  }
+
+  String get greetingName {
+    final displayName = currentUserDisplayName?.trim();
+    if (displayName != null && displayName.isNotEmpty) {
+      return displayName;
+    }
+
+    final email = currentUserEmail?.trim();
+    if (email != null && email.isNotEmpty && email.contains('@')) {
+      return email.split('@').first;
+    }
+
+    return '営業担当者';
+  }
 
   Future<void> initialize() async {
     if (_isInitialized) return;

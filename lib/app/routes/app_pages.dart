@@ -1,14 +1,20 @@
+/// GetX 페이지 등록 정보를 모아두는 라우팅 테이블이다.
 import 'package:get/get.dart';
 import 'package:jg_business/app/routes/app_routes.dart';
 import 'package:jg_business/features/auth/data/datasources/google_auth_remote_data_source.dart';
+import 'package:jg_business/features/business_card/data/repositories/business_card_repository.dart';
+import 'package:jg_business/features/business_card/presentation/controllers/business_card_controller.dart';
+import 'package:jg_business/features/business_card/presentation/screens/business_card_screen.dart';
 import 'package:jg_business/features/calendar/data/datasources/google_calendar_remote_data_source.dart';
 import 'package:jg_business/features/calendar/data/models/calendar_events_response.dart';
 import 'package:jg_business/features/calendar/presentation/controllers/calendar_event_controler.dart';
 import 'package:jg_business/features/calendar/presentation/screens/calendar_event_detail_screen.dart';
 import 'package:jg_business/features/calendar/presentation/screens/calendar_event_screen.dart';
+import 'package:jg_business/features/client/data/repositories/client_repository.dart';
 import 'package:jg_business/features/main/presentation/bindings/main_binding.dart';
 import 'package:jg_business/features/main/presentation/screens/main_screen.dart';
 import 'package:jg_business/features/meeting/data/repositories/meeting_record_repository.dart';
+import 'package:jg_business/features/meeting/data/repositories/meeting_status_repository.dart';
 import 'package:jg_business/features/meeting/presentation/controllers/meeting_record_controller.dart';
 import 'package:jg_business/features/meeting/presentation/screens/meeting_record_screen.dart';
 import 'package:jg_business/features/onboarding/presentation/screens/calendar_connect_intro_screen.dart';
@@ -34,6 +40,17 @@ abstract final class AppPages {
       page: () => const CalendarConnectIntroScreen(),
     ),
     GetPage(
+      name: AppRoutes.businessCard,
+      page: () => const BusinessCardScreen(),
+      binding: BindingsBuilder.put(() {
+        return BusinessCardController(
+          businessCardRepository: Get.find<BusinessCardRepository>(),
+          clientRepository: Get.find<ClientRepository>(),
+          authRemoteDataSource: Get.find<GoogleAuthRemoteDataSource>(),
+        );
+      }),
+    ),
+    GetPage(
       name: AppRoutes.calendarEventDetail,
       page: () {
         final map = Get.arguments as Map<String, dynamic>;
@@ -48,6 +65,8 @@ abstract final class AppPages {
         final event = Get.arguments as CalendarEvent;
         return MeetingRecordController(
           repository: Get.find<MeetingRecordRepository>(),
+          meetingStatusRepository: Get.find<MeetingStatusRepository>(),
+          clientRepository: Get.find<ClientRepository>(),
           authRemoteDataSource: Get.find<GoogleAuthRemoteDataSource>(),
           event: event,
         );

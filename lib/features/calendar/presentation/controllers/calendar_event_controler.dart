@@ -1,3 +1,4 @@
+/// 일정 생성/수정 폼의 입력 상태와 제출 로직을 담당한다.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/features/calendar/data/datasources/google_calendar_remote_data_source.dart';

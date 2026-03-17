@@ -1,3 +1,4 @@
+/// 홈 화면 톤에 맞춘 Google Calendar 일정 생성/수정 화면이다.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/features/calendar/presentation/controllers/calendar_event_controler.dart';

@@ -1,3 +1,4 @@
+/// Google Calendar 이벤트를 calendar_view 위젯 모델로 변환한다.
 import 'package:calendar_view/calendar_view.dart';
 import 'package:flutter/material.dart';
 import 'package:jg_business/features/calendar/data/models/calendar_events_response.dart';

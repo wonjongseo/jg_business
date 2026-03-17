@@ -1,3 +1,4 @@
+/// Google Calendar events 응답 모델 모음이다.
 class CalendarEventsResponse {
   const CalendarEventsResponse({
     required this.kind,

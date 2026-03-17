@@ -1,3 +1,4 @@
+/// 일본어 UI에 맞춘 날짜/시간 문자열 포맷 도우미다.
 import 'package:intl/intl.dart';
 
 abstract final class DateTimeFormatter {

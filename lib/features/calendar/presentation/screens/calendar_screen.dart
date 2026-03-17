@@ -1,3 +1,4 @@
+/// 월간 캘린더와 영업용 일정 요약 리스트를 함께 보여주는 메인 화면이다.
 import 'package:calendar_view/calendar_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

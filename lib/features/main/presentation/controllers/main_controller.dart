@@ -1,32 +1,38 @@
+/// 하단 탭 전환과 기타 설정 화면 상태를 관리한다.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/features/auth/data/datasources/google_auth_remote_data_source.dart';
 import 'package:jg_business/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:jg_business/features/main/presentation/screens/home_screen.dart';
 import 'package:jg_business/features/calendar/presentation/screens/calendar_screen.dart';
+import 'package:jg_business/features/client/presentation/controllers/client_controller.dart';
+import 'package:jg_business/features/client/presentation/screens/client_screen.dart';
 import 'package:jg_business/shared/services/notification_service.dart';
+import 'package:jg_business/shared/services/theme_service.dart';
+import 'package:jg_business/shared/theme/app_tokens.dart';
+import 'package:jg_business/shared/utils/app_feedback.dart';
+import 'package:jg_business/shared/widgets/app_panel.dart';
 
 class MainController extends GetxController {
   MainController({
     required GoogleAuthRemoteDataSource googleAuthRemoteDataSource,
     required CalendarController calendarController,
     required NotificationService notificationService,
+    required ThemeService themeService,
   }) : _googleAuthRemoteDataSource = googleAuthRemoteDataSource,
        _calendarController = calendarController,
-       _notificationService = notificationService;
+       _notificationService = notificationService,
+       _themeService = themeService;
 
   final GoogleAuthRemoteDataSource _googleAuthRemoteDataSource;
   final CalendarController _calendarController;
   final NotificationService _notificationService;
+  final ThemeService _themeService;
 
   late final bodies = <Widget>[
     const HomeScreen(),
     const CalendarScreen(),
-    const _PlaceholderScreen(
-      title: '顧客',
-      subtitle: '顧客一覧、企業詳細、担当者、名刺スキャン確認をここに集約します。',
-      icon: Icons.contact_page_outlined,
-    ),
+    const ClientScreen(),
     const _PlaceholderScreen(
       title: 'アクティビティ',
       subtitle: '面談記録、通話要約、通知履歴、同期失敗項目をここで確認します。',
@@ -74,6 +80,7 @@ class MainController extends GetxController {
   bool get areNotificationsAllowed => _areNotificationsAllowed.value;
   int get pendingReminderCount => _pendingReminderCount.value;
   bool get isRefreshingNotificationStatus => _isRefreshingNotificationStatus.value;
+  bool get isDarkMode => _themeService.isDarkMode;
 
   @override
   void onInit() {
@@ -86,6 +93,9 @@ class MainController extends GetxController {
 
     if (value == 4) {
       refreshNotificationStatus();
+    }
+    if (value == 2 && Get.isRegistered<ClientController>()) {
+      Get.find<ClientController>().fetchClients();
     }
   }
 
@@ -119,20 +129,23 @@ class MainController extends GetxController {
       await _googleAuthRemoteDataSource.signOut();
       await _calendarController.fetchCalendar(interactive: false);
       await refreshNotificationStatus();
-      Get.snackbar(
+      AppFeedback.success(
         'ログアウト完了',
         'Google アカウントからサインアウトしました。',
-        snackPosition: SnackPosition.BOTTOM,
       );
     } catch (_) {
-      Get.snackbar(
+      AppFeedback.error(
         'ログアウト失敗',
         'Google アカウントのサインアウトに失敗しました。',
-        snackPosition: SnackPosition.BOTTOM,
       );
     } finally {
       _isSigningOut.value = false;
     }
+  }
+
+  Future<void> toggleDarkMode(bool value) async {
+    await _themeService.setDarkMode(value);
+    update();
   }
 }
 
@@ -158,12 +171,8 @@ class _PlaceholderScreen extends StatelessWidget {
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
-              child: Container(
+              child: AppPanel(
                 padding: const EdgeInsets.all(28),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.92),
-                  borderRadius: BorderRadius.circular(28),
-                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -175,7 +184,7 @@ class _PlaceholderScreen extends StatelessWidget {
                       subtitle,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: const Color(0xFF556070),
+                        color: AppColors.muted,
                       ),
                     ),
                   ],
@@ -199,41 +208,34 @@ class _MoreScreen extends GetView<MainController> {
 
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
-              child: Container(
+              child: AppPanel(
                 padding: const EdgeInsets.all(28),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.92),
-                  borderRadius: BorderRadius.circular(28),
-                ),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.tune_outlined, size: 42),
+                    const Center(child: Icon(Icons.tune_outlined, size: 42)),
                     const SizedBox(height: 16),
-                    Text('その他', style: theme.textTheme.headlineSmall),
+                    Center(
+                      child: Text('その他', style: theme.textTheme.headlineSmall),
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       'Okta SSO、Google 連携、権限設定、録音ポリシーをここで管理します。',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: const Color(0xFF556070),
+                        color: AppColors.muted,
                       ),
                     ),
                     const SizedBox(height: 24),
                     Obx(
-                      () => Container(
-                        width: double.infinity,
+                      () => AppPanel(
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
-                        ),
+                        borderRadius: 20,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -247,7 +249,7 @@ class _MoreScreen extends GetView<MainController> {
                                   ? '接続中: Google Calendar の予定を取得できます。'
                                   : '未連携: カレンダー取得には Google 連携が必要です。',
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                color: const Color(0xFF556070),
+                                color: AppColors.muted,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -269,14 +271,9 @@ class _MoreScreen extends GetView<MainController> {
                     ),
                     const SizedBox(height: 24),
                     Obx(
-                      () => Container(
-                        width: double.infinity,
+                      () => AppPanel(
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
-                        ),
+                        borderRadius: 20,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -292,7 +289,7 @@ class _MoreScreen extends GetView<MainController> {
                                   ? '通知許可: 有効 / 予約済みリマインダー ${controller.pendingReminderCount} 件'
                                   : '通知許可: 無効 / リマインダーを受け取るには通知を許可してください。',
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                color: const Color(0xFF556070),
+                                color: AppColors.muted,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -314,6 +311,39 @@ class _MoreScreen extends GetView<MainController> {
                             ),
                           ],
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    AppPanel(
+                      padding: const EdgeInsets.all(16),
+                      borderRadius: 20,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'ダークモード',
+                                  style: theme.textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '夜間や暗い環境で見やすい配色に切り替えます。',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Obx(
+                            () => Switch(
+                              value: controller.isDarkMode,
+                              onChanged: controller.toggleDarkMode,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 24),

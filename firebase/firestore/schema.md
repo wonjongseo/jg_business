@@ -88,10 +88,52 @@ Google Calendar event without copying the full event payload.
 }
 ```
 
+Recommended `recordStatus` values:
+- `idle`
+- `pending`
+- `completed`
+
 Planned future expansion after `meeting_status` is stable:
 - `clients`
 - `activity_logs`
 - `sync_states`
+
+### `clients/{clientId}`
+
+```json
+{
+  "userId": "uid",
+  "companyName": "ACME Corp",
+  "contactName": "Kim Tanaka",
+  "phoneNumber": "optional",
+  "email": "optional",
+  "notes": "optional",
+  "linkedGoogleEventIds": ["google-calendar-event-id"],
+  "lastMeetingAt": "timestamp",
+  "createdAt": "timestamp",
+  "updatedAt": "timestamp"
+}
+```
+
+### `business_cards/{businessCardId}`
+
+```json
+{
+  "userId": "uid",
+  "sourceType": "manual_ocr_draft",
+  "imagePath": null,
+  "rawText": "OCR raw text",
+  "companyName": "ACME Corp",
+  "contactName": "Kim Tanaka",
+  "phoneNumber": "optional",
+  "email": "optional",
+  "notes": "optional",
+  "ocrStatus": "confirmed",
+  "linkedClientId": "client-id",
+  "createdAt": "timestamp",
+  "updatedAt": "timestamp"
+}
+```
 
 ## Index Notes
 

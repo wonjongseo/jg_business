@@ -1,3 +1,4 @@
+/// 모바일/태블릿 공용 메인 셸과 탭 내비게이션을 구성한다.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/features/main/presentation/controllers/main_controller.dart';

@@ -1,3 +1,4 @@
+/// 홈 섹션 제목과 우측 액션 라벨을 그리는 공용 헤더다.
 import 'package:flutter/material.dart';
 
 class HomeSectionHeader extends StatelessWidget {

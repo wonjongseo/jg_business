@@ -1,3 +1,4 @@
+/// 첫 실행 시 앱의 핵심 가치를 설명하는 온보딩 화면이다.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/app/routes/app_routes.dart';

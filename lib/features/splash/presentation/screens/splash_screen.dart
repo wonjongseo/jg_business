@@ -1,3 +1,4 @@
+/// 앱 시작 시 짧게 보여주는 스플래시 화면이다.
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatelessWidget {

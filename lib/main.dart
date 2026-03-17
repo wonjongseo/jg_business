@@ -1,11 +1,13 @@
+/// 앱의 전역 초기화와 루트 위젯 구성을 담당한다.
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:get/get_navigation/src/root/get_material_app.dart';
+import 'package:get/get.dart';
 import 'package:jg_business/app/routes/app_pages.dart';
 import 'package:jg_business/app/routes/app_routes.dart';
 import 'package:jg_business/firebase_options.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:jg_business/shared/services/theme_service.dart';
 import 'package:jg_business/shared/theme/app_theme.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -26,6 +28,7 @@ Future<void> main() async {
   } on UnsupportedError {
     // Firebase config is not generated for every desktop target yet.
   }
+  await Get.putAsync(() => ThemeService().init(), permanent: true);
 
   runApp(const JgBusinessApp());
 }
@@ -35,43 +38,24 @@ class JgBusinessApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: 'Jg Business',
-      locale: const Locale('ja', 'JP'),
-      supportedLocales: const [Locale('ja', 'JP'), Locale('en', 'US')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      theme: AppTheme.light,
-      getPages: AppPages.pages,
-      initialRoute: AppRoutes.splash,
+    final themeService = Get.find<ThemeService>();
+
+    return Obx(
+      () => GetMaterialApp(
+        title: 'Jg Business',
+        locale: const Locale('ja', 'JP'),
+        supportedLocales: const [Locale('ja', 'JP'), Locale('en', 'US')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: themeService.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+        getPages: AppPages.pages,
+        initialRoute: AppRoutes.splash,
+      ),
     );
   }
 }
-
-/*
-영업부를 위한 앱.
-구현하고싶은 기능.
-1. 구글 캘린더 CRUD
-2. 구글 캘린더의 미팅을 저장해 시간별 / 미팅 위치별로 알림 보내기
-3. 미팅이 끝나고 5분 뒤 or 미팅 장소에서 300미터 정도 떨어지면 미팅 내용을 기록하라는 알림 보내기
-4. 미팅 내용을 기록하고, google spread sheet에 동기 가능하게
-5. 고객 관리. 명함을 찍으면 명함 내용을 자동으로 등록해주는 기능
-6. voip를 이용해 통화 / 녹음 / AI 요약 기능 
-7. okta sso 인증
-이정도를 생각하는데 더 좋은 아이디어 있어?
-
-
-
-1. 구글 캘린더 CRUD
-2. 구글 캘린더의 미팅을 저장해 시간별 / 미팅 위치별로 알림 보내기
-3. 미팅이 끝나고 5분 뒤 or 미팅 장소에서 300미터 정도 떨어지면 미팅 내용을 기록하라는 알림 보내기
-4. 미팅 내용을 기록하고, google spread sheet에 동기 가능하게
-5. 고객 관리. 명함을 찍으면 명함 내용을 자동으로 등록해주는 기능
-6. voip를 이용해 통화 / 녹음 / AI 요약 기능 
-7. okta sso 인증
-
-잊지마 우리 앱의 최종 형태는 이거야
-*/

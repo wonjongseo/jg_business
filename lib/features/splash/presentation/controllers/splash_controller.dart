@@ -1,3 +1,4 @@
+/// 앱 시작 직후 초기 서비스 준비와 첫 진입 라우팅을 처리한다.
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/app/routes/app_routes.dart';

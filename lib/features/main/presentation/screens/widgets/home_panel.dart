@@ -1,3 +1,4 @@
+/// 홈 화면에서 반복 사용하는 반투명 패널 스타일 래퍼다.
 import 'package:flutter/material.dart';
 
 class HomePanel extends StatelessWidget {

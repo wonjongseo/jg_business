@@ -1,3 +1,4 @@
+/// 미팅 기록을 Firestore `meeting_records` 컬렉션에 저장한다.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jg_business/features/meeting/data/models/meeting_record_entity.dart';
 
@@ -16,6 +17,7 @@ class MeetingRecordFirestoreDataSource {
 
     await _collection.doc(record.id).set({
       'userId': record.userId,
+      'clientId': record.clientId,
       'googleEventId': record.googleEventId,
       'calendarId': record.calendarId,
       'title': record.title,
@@ -42,6 +44,30 @@ class MeetingRecordFirestoreDataSource {
     }, SetOptions(merge: true));
   }
 
+  Future<void> deleteMeetingRecord(String recordId) async {
+    await _collection.doc(recordId).delete();
+  }
+
+  Future<void> updateSheetsSyncState({
+    required String recordId,
+    required String status,
+    required DateTime attemptedAt,
+    DateTime? syncedAt,
+    String? errorCode,
+  }) async {
+    await _collection.doc(recordId).set({
+      'sync': {
+        'sheets': {
+          'status': status,
+          'lastAttemptAt': _toTimestamp(attemptedAt),
+          'lastSyncedAt': _toTimestamp(syncedAt),
+          'errorCode': errorCode,
+        },
+      },
+      'updatedAt': Timestamp.now(),
+    }, SetOptions(merge: true));
+  }
+
   Future<MeetingRecordEntity?> fetchByGoogleEventId({
     required String userId,
     required String googleEventId,
@@ -60,11 +86,16 @@ class MeetingRecordFirestoreDataSource {
   Future<List<MeetingRecordEntity>> fetchRecentByUser(String userId) async {
     final query = await _collection
         .where('userId', isEqualTo: userId)
-        .orderBy('scheduledStartAt', descending: true)
-        .limit(20)
+        .limit(50)
         .get();
 
-    return query.docs.map(_fromDoc).toList();
+    final records = query.docs.map(_fromDoc).toList();
+    records.sort((a, b) {
+      final left = a.updatedAt ?? a.scheduledStartAt ?? DateTime(1970);
+      final right = b.updatedAt ?? b.scheduledStartAt ?? DateTime(1970);
+      return right.compareTo(left);
+    });
+    return records.take(20).toList();
   }
 
   MeetingRecordEntity _fromDoc(
@@ -79,6 +110,7 @@ class MeetingRecordFirestoreDataSource {
     return MeetingRecordEntity(
       id: doc.id,
       userId: data['userId'] as String? ?? '',
+      clientId: data['clientId'] as String?,
       googleEventId: data['googleEventId'] as String? ?? '',
       calendarId: data['calendarId'] as String? ?? 'primary',
       title: data['title'] as String? ?? '',

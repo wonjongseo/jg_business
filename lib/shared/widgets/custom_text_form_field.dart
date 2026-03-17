@@ -1,3 +1,4 @@
+/// 프로젝트 전반에서 공용으로 사용하는 입력 필드 스타일 위젯이다.
 import 'package:flutter/material.dart';
 import 'package:jg_business/shared/theme/app_tokens.dart';
 

@@ -1,3 +1,4 @@
+/// 미팅 기록을 입력하고 Firestore에 저장하는 화면이다.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -41,16 +42,24 @@ class MeetingRecordScreen extends GetView<MeetingRecordController> {
                         icon: const Icon(Icons.arrow_back_ios_new),
                       ),
                       Expanded(
-                        child: Text(
-                          'ミーティング記録',
-                          style: theme.textTheme.titleLarge,
+                        child: Obx(
+                          () => Text(
+                            controller.isEditMode
+                                ? 'ミーティング記録を修正'
+                                : 'ミーティング記録を作成',
+                            style: theme.textTheme.titleLarge,
+                          ),
                         ),
                       ),
                       Obx(
                         () => TextButton(
                           onPressed: controller.isSaving.value ? null : controller.save,
                           child: Text(
-                            controller.isSaving.value ? '保存中...' : '保存',
+                            controller.isSaving.value
+                                ? '保存中...'
+                                : controller.isEditMode
+                                ? '更新'
+                                : '保存',
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
@@ -73,6 +82,28 @@ class MeetingRecordScreen extends GetView<MeetingRecordController> {
                           title: '基本情報',
                           child: Column(
                             children: [
+                              Obx(
+                                () => DropdownButtonFormField<String?>(
+                                  value: controller.selectedClientId.value,
+                                  decoration: const InputDecoration(
+                                    labelText: '既存顧客',
+                                  ),
+                                  items: [
+                                    const DropdownMenuItem<String?>(
+                                      value: null,
+                                      child: Text('新しい顧客として保存'),
+                                    ),
+                                    ...controller.clients.map(
+                                      (client) => DropdownMenuItem<String?>(
+                                        value: client.id,
+                                        child: Text(client.displayName),
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: controller.onClientSelected,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
                               CustomTextFormField(
                                 label: '会社名',
                                 hintText: '会社名を入力してください。',
@@ -124,21 +155,64 @@ class MeetingRecordScreen extends GetView<MeetingRecordController> {
                           ),
                         ),
                         const SizedBox(height: 18),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(26),
-                            border: Border.all(color: Colors.white.withOpacity(0.8)),
-                          ),
-                          child: Text(
-                            '保存先: Firestore / meeting_records\n同期状態: pending として保存します。',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: AppColors.muted,
+                        Obx(
+                          () => Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(26),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.8),
+                              ),
+                            ),
+                            child: Text(
+                              '保存先: Firestore / ${controller.recordDocumentPath}\n'
+                              '顧客連携: ${controller.selectedClientId.value ?? '新規作成'}\n'
+                              '記録状態: completed として保存\n'
+                              'Sheets同期状態: ${controller.sheetsSyncStatusLabel}\n'
+                              'Sheets同期は予定詳細画面から実行できます。',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: AppColors.muted,
+                              ),
                             ),
                           ),
                         ),
+                        const SizedBox(height: 18),
+                        Obx(() {
+                          if (!controller.isEditMode) {
+                            return const SizedBox.shrink();
+                          }
+
+                          return SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed:
+                                  controller.isDeleting.value
+                                      ? null
+                                      : controller.deleteRecord,
+                              icon:
+                                  controller.isDeleting.value
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.delete_outline),
+                              label: Text(
+                                controller.isDeleting.value
+                                    ? '削除中...'
+                                    : '記録を削除',
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red.shade700,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                            ),
+                          );
+                        }),
                       ],
                     ),
                   ),

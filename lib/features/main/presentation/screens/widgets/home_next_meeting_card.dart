@@ -1,3 +1,4 @@
+/// 다음 미팅 또는 진행 중인 미팅을 강조해서 보여주는 카드다.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';

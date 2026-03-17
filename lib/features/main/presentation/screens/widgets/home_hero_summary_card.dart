@@ -1,5 +1,7 @@
+/// 홈 상단에서 오늘의 핵심 영업 지표를 요약하는 카드다.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:jg_business/features/auth/data/datasources/google_auth_remote_data_source.dart';
 import 'package:jg_business/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:jg_business/shared/theme/app_tokens.dart';
 
@@ -14,6 +16,7 @@ class HomeHeroSummaryCard extends StatelessWidget {
 
     if (controller == null) {
       return const _HeroContent(
+        greetingName: '営業担当者',
         todayMeetings: '0',
         pendingRecords: '0',
         syncAlerts: '0',
@@ -21,10 +24,13 @@ class HomeHeroSummaryCard extends StatelessWidget {
       );
     }
 
+    final authRemoteDataSource = Get.find<GoogleAuthRemoteDataSource>();
+
     return Obx(
       () => _HeroContent(
+        greetingName: authRemoteDataSource.greetingName,
         todayMeetings: '${controller.todayEvents.length}',
-        pendingRecords: '0',
+        pendingRecords: '${controller.pendingRecordCount}',
         syncAlerts: '0',
         description: controller.isConnected
             ? '営業の流れはこのまま広げます。今の段階では Google Calendar の予定取得を先に固めています。'
@@ -36,12 +42,14 @@ class HomeHeroSummaryCard extends StatelessWidget {
 
 class _HeroContent extends StatelessWidget {
   const _HeroContent({
+    required this.greetingName,
     required this.todayMeetings,
     required this.pendingRecords,
     required this.syncAlerts,
     required this.description,
   });
 
+  final String greetingName;
   final String todayMeetings;
   final String pendingRecords;
   final String syncAlerts;
@@ -72,7 +80,7 @@ class _HeroContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'おはようございます、\nAlex',
+            'おはようございます、\n$greetingName',
             style: theme.textTheme.headlineMedium?.copyWith(
               color: Colors.white,
               height: 1.04,

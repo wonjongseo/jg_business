@@ -1,3 +1,4 @@
+/// 기본 위젯 트리 구성이 깨지지 않는지만 확인하는 최소 테스트다.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/features/main/presentation/screens/home_screen.dart';

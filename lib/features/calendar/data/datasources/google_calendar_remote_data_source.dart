@@ -1,3 +1,4 @@
+/// Google Calendar REST API를 호출해 일정 CRUD를 수행한다.
 import 'package:dio/dio.dart';
 import 'package:jg_business/features/auth/data/datasources/google_auth_remote_data_source.dart';
 import 'package:jg_business/features/calendar/data/models/calendar_events_response.dart';
@@ -19,6 +20,17 @@ class GoogleCalendarRemoteDataSource {
 
   Future<List<CalendarEvent>> fetchEvents({bool interactive = true}) async {
     try {
+      final now = DateTime.now();
+      final timeMin = DateTime(now.year, now.month, now.day);
+      final timeMax = DateTime(
+        now.year,
+        now.month + 6,
+        now.day,
+        23,
+        59,
+        59,
+      );
+
       final headers = await _authRemoteDataSource.getAuthorizationHeaders(
         interactive: interactive,
       );
@@ -30,11 +42,8 @@ class GoogleCalendarRemoteDataSource {
         queryParameters: {
           'singleEvents': true,
           'orderBy': 'startTime',
-          'timeMin': DateTime(
-            DateTime.now().year,
-            DateTime.now().month,
-            DateTime.now().day,
-          ).toUtc().toIso8601String(),
+          'timeMin': timeMin.toUtc().toIso8601String(),
+          'timeMax': timeMax.toUtc().toIso8601String(),
           // 'maxResults': 12,
         },
       );
@@ -44,8 +53,7 @@ class GoogleCalendarRemoteDataSource {
       );
 
       return calendarResponse.items;
-    } catch (e) {
-      print(e.toString());
+    } catch (_) {
       return [];
     }
   }
