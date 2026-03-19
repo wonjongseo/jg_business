@@ -1,30 +1,33 @@
 /// 하단 탭 전환과 기타 설정 화면 상태를 관리한다.
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:jg_business/features/auth/data/datasources/google_auth_remote_data_source.dart';
+import 'package:jg_business/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:jg_business/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:jg_business/features/main/presentation/screens/home_screen.dart';
 import 'package:jg_business/features/calendar/presentation/screens/calendar_screen.dart';
 import 'package:jg_business/features/client/presentation/controllers/client_controller.dart';
 import 'package:jg_business/features/client/presentation/screens/client_screen.dart';
+import 'package:jg_business/shared/layout/app_responsive.dart';
 import 'package:jg_business/shared/services/notification_service.dart';
 import 'package:jg_business/shared/services/theme_service.dart';
 import 'package:jg_business/shared/theme/app_tokens.dart';
 import 'package:jg_business/shared/utils/app_feedback.dart';
 import 'package:jg_business/shared/widgets/app_panel.dart';
+import 'package:jg_business/shared/widgets/google_sign_in_web_button.dart';
 
 class MainController extends GetxController {
   MainController({
-    required GoogleAuthRemoteDataSource googleAuthRemoteDataSource,
+    required AuthController authController,
     required CalendarController calendarController,
     required NotificationService notificationService,
     required ThemeService themeService,
-  }) : _googleAuthRemoteDataSource = googleAuthRemoteDataSource,
+  }) : _authController = authController,
        _calendarController = calendarController,
        _notificationService = notificationService,
        _themeService = themeService;
 
-  final GoogleAuthRemoteDataSource _googleAuthRemoteDataSource;
+  final AuthController _authController;
   final CalendarController _calendarController;
   final NotificationService _notificationService;
   final ThemeService _themeService;
@@ -126,7 +129,7 @@ class MainController extends GetxController {
 
     try {
       _isSigningOut.value = true;
-      await _googleAuthRemoteDataSource.signOut();
+      await _authController.signOut();
       await _calendarController.fetchCalendar(interactive: false);
       await refreshNotificationStatus();
       AppFeedback.success(
@@ -170,7 +173,9 @@ class _PlaceholderScreen extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
+              constraints: const BoxConstraints(
+                maxWidth: AppResponsive.compactContentMaxWidth,
+              ),
               child: AppPanel(
                 padding: const EdgeInsets.all(28),
                 child: Column(
@@ -212,7 +217,9 @@ class _MoreScreen extends GetView<MainController> {
           padding: const EdgeInsets.all(24),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
+              constraints: const BoxConstraints(
+                maxWidth: AppResponsive.compactContentMaxWidth,
+              ),
               child: AppPanel(
                 padding: const EdgeInsets.all(28),
                 child: Column(
@@ -255,15 +262,18 @@ class _MoreScreen extends GetView<MainController> {
                             const SizedBox(height: 12),
                             SizedBox(
                               width: double.infinity,
-                              child: FilledButton.tonalIcon(
-                                onPressed: controller.reconnectCalendar,
-                                icon: const Icon(Icons.link_outlined),
-                                label: Text(
-                                  calendarController.isConnected
-                                      ? 'Google Calendar を再連携'
-                                      : 'Google Calendar を連携',
-                                ),
-                              ),
+                              child:
+                                  kIsWeb && !calendarController.isConnected
+                                      ? const GoogleSignInWebButton()
+                                      : FilledButton.tonalIcon(
+                                        onPressed: controller.reconnectCalendar,
+                                        icon: const Icon(Icons.link_outlined),
+                                        label: Text(
+                                          calendarController.isConnected
+                                              ? 'Google Calendar を再連携'
+                                              : 'Google Calendar を連携',
+                                        ),
+                                      ),
                             ),
                           ],
                         ),

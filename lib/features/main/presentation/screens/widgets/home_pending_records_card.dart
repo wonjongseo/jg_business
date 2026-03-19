@@ -33,6 +33,7 @@ class HomePendingRecordsCard extends StatelessWidget {
 
       return HomePanel(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             for (var i = 0; i < events.length; i++) ...[
               _PendingRecordTile(event: events[i], controller: controller),
@@ -46,10 +47,7 @@ class HomePendingRecordsCard extends StatelessWidget {
 }
 
 class _PendingRecordTile extends StatelessWidget {
-  const _PendingRecordTile({
-    required this.event,
-    required this.controller,
-  });
+  const _PendingRecordTile({required this.event, required this.controller});
 
   final CalendarEvent event;
   final CalendarController controller;
@@ -72,11 +70,12 @@ class _PendingRecordTile extends StatelessWidget {
           [
             if (start != null) formatter.format(start),
             if (end != null) '~ ${DateFormat('HH:mm').format(end)}',
-            if (event.location?.trim().isNotEmpty == true) event.location!.trim(),
+            if (event.location?.trim().isNotEmpty == true)
+              event.location!.trim(),
           ].join(' '),
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: const Color(0xFF556070),
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF556070)),
         ),
         const SizedBox(height: 10),
         FilledButton.tonalIcon(

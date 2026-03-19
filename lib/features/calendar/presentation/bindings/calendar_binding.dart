@@ -1,6 +1,7 @@
 /// 캘린더 기능에서 필요한 의존성을 GetX에 등록한다.
 import 'package:get/get.dart';
 import 'package:jg_business/features/auth/data/datasources/google_auth_remote_data_source.dart';
+import 'package:jg_business/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:jg_business/features/business_card/data/datasources/business_card_firestore_data_source.dart';
 import 'package:jg_business/features/business_card/data/repositories/business_card_repository.dart';
 import 'package:jg_business/features/calendar/data/datasources/google_calendar_remote_data_source.dart';
@@ -20,6 +21,12 @@ class CalendarBinding extends Bindings {
   void dependencies() {
     Get.lazyPut<GoogleAuthRemoteDataSource>(
       () => GoogleAuthRemoteDataSource(),
+      fenix: true,
+    );
+    Get.lazyPut<AuthController>(
+      () => AuthController(
+        authRemoteDataSource: Get.find<GoogleAuthRemoteDataSource>(),
+      ),
       fenix: true,
     );
     Get.lazyPut<GoogleCalendarRemoteDataSource>(
@@ -85,10 +92,9 @@ class CalendarBinding extends Bindings {
       () => CalendarController(
         remoteDataSource: Get.find<GoogleCalendarRemoteDataSource>(),
         notificationService: Get.find<NotificationService>(),
-        authRemoteDataSource: Get.find<GoogleAuthRemoteDataSource>(),
+        authController: Get.find<AuthController>(),
         meetingRecordRepository: Get.find<MeetingRecordRepository>(),
         meetingStatusRepository: Get.find<MeetingStatusRepository>(),
-        spreadsheetSyncRepository: Get.find<SpreadsheetSyncRepository>(),
       ),
       fenix: true,
     );

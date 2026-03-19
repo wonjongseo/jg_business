@@ -1,11 +1,14 @@
 /// 월간 캘린더와 영업용 일정 요약 리스트를 함께 보여주는 메인 화면이다.
 import 'package:calendar_view/calendar_view.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:jg_business/features/calendar/data/models/calendar_events_response.dart';
 import 'package:jg_business/features/calendar/presentation/controllers/calendar_controller.dart';
+import 'package:jg_business/shared/layout/app_responsive.dart';
 import 'package:jg_business/shared/theme/app_tokens.dart';
+import 'package:jg_business/shared/widgets/google_sign_in_web_button.dart';
 
 class CalendarScreen extends GetView<CalendarController> {
   const CalendarScreen({super.key});
@@ -158,7 +161,9 @@ class _CalendarDisconnectedState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
+          constraints: const BoxConstraints(
+            maxWidth: AppResponsive.compactContentMaxWidth,
+          ),
           child: Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
@@ -190,11 +195,14 @@ class _CalendarDisconnectedState extends StatelessWidget {
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: controller.connectCalendar,
-                    icon: const Icon(Icons.link_outlined),
-                    label: const Text('Google Calendar を連携する'),
-                  ),
+                  child:
+                      kIsWeb
+                          ? const GoogleSignInWebButton()
+                          : FilledButton.icon(
+                            onPressed: controller.connectCalendar,
+                            icon: const Icon(Icons.link_outlined),
+                            label: const Text('Google Calendar を連携する'),
+                          ),
                 ),
               ],
             ),

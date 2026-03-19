@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/features/calendar/presentation/controllers/calendar_event_controler.dart';
+import 'package:jg_business/shared/layout/app_responsive.dart';
 import 'package:jg_business/shared/theme/app_tokens.dart';
 import 'package:jg_business/shared/utils/date_time_picker_helper.dart';
 import 'package:jg_business/shared/widgets/custom_text_form_field.dart';
@@ -186,7 +187,8 @@ class CalendarEventScreen extends GetView<CalendarEventControler> {
                                       InputChip(
                                         label: ConstrainedBox(
                                           constraints: const BoxConstraints(
-                                            maxWidth: 220,
+                                            maxWidth:
+                                                AppResponsive.attendeeChipMaxWidth,
                                           ),
                                           child: Text(
                                             email,

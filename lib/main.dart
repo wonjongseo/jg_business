@@ -59,3 +59,6 @@ class JgBusinessApp extends StatelessWidget {
     );
   }
 }
+
+// flutter run -d chrome --web-port 3000
+//flutter run -d chrome \  --dart-define=GOOGLE_WEB_CLIENT_ID=820390242930-k2ciki8i7divtsebcrisl172fer62t0o.apps.googleusercontent.com

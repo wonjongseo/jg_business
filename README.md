@@ -1,17 +1,9 @@
-# jg_business
+GCP
 
-A new Flutter project.
+- Google Calendar
+- Google Sheet
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-# jg_business
+Data Access > 범위 추가 또는 삭제
+아래 2개 추가
+.../auth/calendar
+.../auth/spreadsheets

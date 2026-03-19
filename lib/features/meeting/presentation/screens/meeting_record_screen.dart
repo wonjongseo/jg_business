@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:jg_business/features/calendar/data/models/calendar_events_response.dart';
 import 'package:jg_business/features/meeting/presentation/controllers/meeting_record_controller.dart';
 import 'package:jg_business/shared/theme/app_tokens.dart';
 import 'package:jg_business/shared/widgets/custom_text_form_field.dart';
@@ -15,6 +16,15 @@ class MeetingRecordScreen extends GetView<MeetingRecordController> {
     final event = controller.event;
     final start = event.start?.dateTime ?? event.start?.date;
     final end = event.end?.dateTime ?? event.end?.date;
+    final currentUserEmail = controller.currentUserEmail?.trim().toLowerCase();
+    final referenceAttendees =
+        event.attendees.where((attendee) {
+          final attendeeEmail = attendee.email?.trim().toLowerCase();
+          if (attendeeEmail == null || attendeeEmail.isEmpty) {
+            return true;
+          }
+          return attendeeEmail != currentUserEmail;
+        }).toList();
 
     return Scaffold(
       body: DecoratedBox(
@@ -83,25 +93,37 @@ class MeetingRecordScreen extends GetView<MeetingRecordController> {
                           child: Column(
                             children: [
                               Obx(
-                                () => DropdownButtonFormField<String?>(
-                                  value: controller.selectedClientId.value,
-                                  decoration: const InputDecoration(
-                                    labelText: '既存顧客',
-                                  ),
-                                  items: [
-                                    const DropdownMenuItem<String?>(
-                                      value: null,
-                                      child: Text('新しい顧客として保存'),
+                                () {
+                                  final clients = controller.clients;
+                                  final selectedClientId =
+                                      controller.selectedClientId.value;
+                                  final hasSelectedClient = clients.any(
+                                    (client) => client.id == selectedClientId,
+                                  );
+
+                                  return DropdownButtonFormField<String?>(
+                                    value:
+                                        hasSelectedClient
+                                            ? selectedClientId
+                                            : null,
+                                    decoration: const InputDecoration(
+                                      labelText: '登録済み顧客',
                                     ),
-                                    ...controller.clients.map(
-                                      (client) => DropdownMenuItem<String?>(
-                                        value: client.id,
-                                        child: Text(client.displayName),
+                                    items: [
+                                      const DropdownMenuItem<String?>(
+                                        value: null,
+                                        child: Text('新しい顧客として保存'),
                                       ),
-                                    ),
-                                  ],
-                                  onChanged: controller.onClientSelected,
-                                ),
+                                      ...clients.map(
+                                        (client) => DropdownMenuItem<String?>(
+                                          value: client.id,
+                                          child: Text(client.displayName),
+                                        ),
+                                      ),
+                                    ],
+                                    onChanged: controller.onClientSelected,
+                                  );
+                                },
                               ),
                               const SizedBox(height: 16),
                               CustomTextFormField(
@@ -112,8 +134,8 @@ class MeetingRecordScreen extends GetView<MeetingRecordController> {
                               ),
                               const SizedBox(height: 16),
                               CustomTextFormField(
-                                label: '担当者名',
-                                hintText: '担当者名を入力してください。',
+                                label: 'ご担当者名',
+                                hintText: 'ご担当者名を入力してください。',
                                 controller: controller.contactNameCtrl,
                                 textInputAction: TextInputAction.next,
                               ),
@@ -121,6 +143,21 @@ class MeetingRecordScreen extends GetView<MeetingRecordController> {
                           ),
                         ),
                         const SizedBox(height: 18),
+                        if (referenceAttendees.isNotEmpty) ...[
+                          _FormPanel(
+                            title: '参考参加者',
+                            child: Column(
+                              children: [
+                                for (final attendee in referenceAttendees) ...[
+                                  _AttendeeTile(attendee: attendee),
+                                  if (attendee != referenceAttendees.last)
+                                    const Divider(height: 20),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                        ],
                         _FormPanel(
                           title: '記録内容',
                           child: Column(
@@ -171,7 +208,7 @@ class MeetingRecordScreen extends GetView<MeetingRecordController> {
                               '顧客連携: ${controller.selectedClientId.value ?? '新規作成'}\n'
                               '記録状態: completed として保存\n'
                               'Sheets同期状態: ${controller.sheetsSyncStatusLabel}\n'
-                              'Sheets同期は予定詳細画面から実行できます。',
+                              '保存後に Google Sheets へ自動同期されます。',
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: AppColors.muted,
                               ),
@@ -223,6 +260,89 @@ class MeetingRecordScreen extends GetView<MeetingRecordController> {
         ),
       ),
     );
+  }
+}
+
+class _AttendeeTile extends StatelessWidget {
+  const _AttendeeTile({required this.attendee});
+
+  final CalendarAttendee attendee;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final label = attendee.label.trim();
+    final email = attendee.email?.trim() ?? '';
+    final responseStatus = _responseStatusLabel(attendee.responseStatus);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: const Color(0x1473BA78),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          alignment: Alignment.center,
+          child: const Icon(Icons.people_alt_outlined, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label.isEmpty ? '名前未設定' : label,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (email.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  email,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.muted,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (responseStatus.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.75),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              responseStatus,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppColors.muted,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+String _responseStatusLabel(String? value) {
+  switch (value?.trim()) {
+    case 'accepted':
+      return '参加予定';
+    case 'declined':
+      return '辞退';
+    case 'tentative':
+      return '未定';
+    case 'needsAction':
+      return '未回答';
+    default:
+      return value?.trim() ?? '';
   }
 }
 

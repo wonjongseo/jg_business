@@ -1,7 +1,7 @@
 /// 홈 상단에서 오늘의 핵심 영업 지표를 요약하는 카드다.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:jg_business/features/auth/data/datasources/google_auth_remote_data_source.dart';
+import 'package:jg_business/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:jg_business/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:jg_business/shared/theme/app_tokens.dart';
 
@@ -24,11 +24,11 @@ class HomeHeroSummaryCard extends StatelessWidget {
       );
     }
 
-    final authRemoteDataSource = Get.find<GoogleAuthRemoteDataSource>();
+    final authController = Get.find<AuthController>();
 
     return Obx(
       () => _HeroContent(
-        greetingName: authRemoteDataSource.greetingName,
+        greetingName: authController.greetingName,
         todayMeetings: '${controller.todayEvents.length}',
         pendingRecords: '${controller.pendingRecordCount}',
         syncAlerts: '0',

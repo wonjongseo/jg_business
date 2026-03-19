@@ -2,7 +2,7 @@
 import 'package:calendar_view/calendar_view.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/app/routes/app_routes.dart';
-import 'package:jg_business/features/auth/data/datasources/google_auth_remote_data_source.dart';
+import 'package:jg_business/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:jg_business/features/calendar/data/datasources/google_calendar_remote_data_source.dart';
 import 'package:jg_business/features/calendar/data/models/calendar_events_response.dart';
 import 'package:jg_business/features/calendar/presentation/mappers/calendar_event_mapper.dart';
@@ -11,31 +11,26 @@ import 'package:jg_business/features/meeting/data/models/meeting_record_entity.d
 import 'package:jg_business/features/meeting/data/models/meeting_status_entity.dart';
 import 'package:jg_business/features/meeting/data/repositories/meeting_record_repository.dart';
 import 'package:jg_business/features/meeting/data/repositories/meeting_status_repository.dart';
-import 'package:jg_business/features/spreadsheet_sync/data/repositories/spreadsheet_sync_repository.dart';
 import 'package:jg_business/shared/services/notification_service.dart';
-import 'package:jg_business/shared/utils/app_feedback.dart';
 
 class CalendarController extends GetxController {
   CalendarController({
     required GoogleCalendarRemoteDataSource remoteDataSource,
     required NotificationService notificationService,
-    required GoogleAuthRemoteDataSource authRemoteDataSource,
+    required AuthController authController,
     required MeetingRecordRepository meetingRecordRepository,
     required MeetingStatusRepository meetingStatusRepository,
-    required SpreadsheetSyncRepository spreadsheetSyncRepository,
   }) : _remoteDataSource = remoteDataSource,
        _notificationService = notificationService,
-       _authRemoteDataSource = authRemoteDataSource,
+       _authController = authController,
        _meetingRecordRepository = meetingRecordRepository,
-       _meetingStatusRepository = meetingStatusRepository,
-       _spreadsheetSyncRepository = spreadsheetSyncRepository;
+       _meetingStatusRepository = meetingStatusRepository;
 
   final GoogleCalendarRemoteDataSource _remoteDataSource;
   final NotificationService _notificationService;
-  final GoogleAuthRemoteDataSource _authRemoteDataSource;
+  final AuthController _authController;
   final MeetingRecordRepository _meetingRecordRepository;
   final MeetingStatusRepository _meetingStatusRepository;
-  final SpreadsheetSyncRepository _spreadsheetSyncRepository;
 
   final _isLoading = false.obs;
   bool get isLoading => _isLoading.value;
@@ -47,7 +42,6 @@ class CalendarController extends GetxController {
   List<CalendarEvent> get events => _events;
   final _meetingStatuses = <String, MeetingStatusEntity>{}.obs;
   final _meetingRecords = <String, MeetingRecordEntity>{}.obs;
-  final _syncingRecordIds = <String>{}.obs;
 
   // Home and calendar summary panels both depend on the same "what matters now"
   // interpretation: ongoing meeting first, otherwise the next upcoming one.
@@ -67,6 +61,7 @@ class CalendarController extends GetxController {
   final calendarEventController = EventController<CalendarEvent>();
 
   final focusedDay = DateTime.now().obs;
+  Worker? _authSessionWorker;
 
   List<CalendarEvent> get todayEvents {
     final today = DateTime.now();
@@ -75,16 +70,21 @@ class CalendarController extends GetxController {
 
   List<CalendarEvent> get upcomingEvents {
     final now = DateTime.now();
-    return _events.where((event) {
-      final start = event.start?.dateTime ?? event.start?.date;
-      final end = event.end?.dateTime ?? event.end?.date;
-      if (start == null && end == null) return false;
-      return (end ?? start) != null && !(end ?? start)!.isBefore(now);
-    }).take(6).toList();
+    return _events
+        .where((event) {
+          final start = event.start?.dateTime ?? event.start?.date;
+          final end = event.end?.dateTime ?? event.end?.date;
+          if (start == null && end == null) return false;
+          return (end ?? start) != null && !(end ?? start)!.isBefore(now);
+        })
+        .take(6)
+        .toList();
   }
 
   List<CalendarEvent> get focusedDayEvents {
-    return _events.where((event) => occursOnDate(event, focusedDay.value)).toList();
+    return _events
+        .where((event) => occursOnDate(event, focusedDay.value))
+        .toList();
   }
 
   List<MeetingRecordEntity> get recentMeetingRecords {
@@ -98,19 +98,24 @@ class CalendarController extends GetxController {
   }
 
   List<CalendarEvent> get pendingRecordEvents {
-    final pendingEventIds = _meetingStatuses.values
-        .where((status) => status.recordStatus == 'pending')
-        .map((status) => status.googleEventId)
-        .toSet();
+    final pendingEventIds =
+        _meetingStatuses.values
+            .where((status) => status.recordStatus == 'pending')
+            .map((status) => status.googleEventId)
+            .toSet();
 
     return _events
-        .where((event) => event.id != null && pendingEventIds.contains(event.id))
+        .where(
+          (event) => event.id != null && pendingEventIds.contains(event.id),
+        )
         .take(3)
         .toList();
   }
 
   int get pendingRecordCount =>
-      _meetingStatuses.values.where((status) => status.recordStatus == 'pending').length;
+      _meetingStatuses.values
+          .where((status) => status.recordStatus == 'pending')
+          .length;
 
   MeetingStatusEntity? statusForEvent(CalendarEvent event) {
     final eventId = event.id;
@@ -123,8 +128,6 @@ class CalendarController extends GetxController {
     if (eventId == null) return null;
     return _meetingRecords[eventId];
   }
-
-  bool isSyncingRecord(String recordId) => _syncingRecordIds.contains(recordId);
 
   bool isOngoing(CalendarEvent event) {
     final now = DateTime.now();
@@ -166,6 +169,10 @@ class CalendarController extends GetxController {
     super.onInit();
     await _remoteDataSource.initialize();
     _isConnected.value = _remoteDataSource.isConnected;
+    _authSessionWorker = ever<int>(_authController.sessionVersionRx, (_) async {
+      _isConnected.value = _remoteDataSource.isConnected;
+      await fetchCalendar(interactive: _isConnected.value);
+    });
     await fetchCalendar(interactive: false);
   }
 
@@ -196,19 +203,15 @@ class CalendarController extends GetxController {
   }
 
   void openEventDetail(CalendarEvent event) {
-    Get.toNamed(
-      AppRoutes.calendarEventDetail,
-      arguments: {'event': event},
-    );
+    Get.toNamed(AppRoutes.calendarEventDetail, arguments: {'event': event});
   }
 
   void goToEventScreen({
     List<CalendarEventData<CalendarEvent>>? events,
     required DateTime date,
   }) {
-    final selectedEvent = events != null && events.isNotEmpty
-        ? events.first.event
-        : null;
+    final selectedEvent =
+        events != null && events.isNotEmpty ? events.first.event : null;
 
     Get.toNamed(
       CalendarEventScreen.name,
@@ -217,8 +220,7 @@ class CalendarController extends GetxController {
   }
 
   void openEventEditor(CalendarEvent event) {
-    final date =
-        event.start?.dateTime ?? event.start?.date ?? focusedDay.value;
+    final date = event.start?.dateTime ?? event.start?.date ?? focusedDay.value;
     Get.toNamed(
       CalendarEventScreen.name,
       arguments: {'event': event, 'date': date},
@@ -227,6 +229,7 @@ class CalendarController extends GetxController {
 
   @override
   void onClose() {
+    _authSessionWorker?.dispose();
     calendarEventController.dispose();
     super.onClose();
   }
@@ -259,59 +262,6 @@ class CalendarController extends GetxController {
     }
   }
 
-  Future<void> syncRecordToSheets(CalendarEvent event) async {
-    final record = recordForEvent(event);
-    if (record == null) {
-      AppFeedback.info(
-        '同期不可',
-        '先にミーティング記録を保存してください。',
-      );
-      return;
-    }
-    if (_syncingRecordIds.contains(record.id)) return;
-
-    final attemptedAt = DateTime.now();
-    _syncingRecordIds.add(record.id);
-    _syncingRecordIds.refresh();
-
-    try {
-      await _meetingRecordRepository.updateSheetsSyncState(
-        recordId: record.id,
-        status: 'syncing',
-        attemptedAt: attemptedAt,
-        errorCode: null,
-      );
-      await _spreadsheetSyncRepository.syncMeetingRecord(record);
-      await _meetingRecordRepository.updateSheetsSyncState(
-        recordId: record.id,
-        status: 'synced',
-        attemptedAt: attemptedAt,
-        syncedAt: DateTime.now(),
-        errorCode: null,
-      );
-      await _syncMeetingRecords(_events);
-      AppFeedback.success(
-        '同期完了',
-        'ミーティング記録を Google Sheets に同期しました。',
-      );
-    } catch (error) {
-      await _meetingRecordRepository.updateSheetsSyncState(
-        recordId: record.id,
-        status: 'failed',
-        attemptedAt: attemptedAt,
-        errorCode: _mapSyncError(error),
-      );
-      await _syncMeetingRecords(_events);
-      AppFeedback.error(
-        '同期失敗',
-        _syncErrorMessage(error),
-      );
-    } finally {
-      _syncingRecordIds.remove(record.id);
-      _syncingRecordIds.refresh();
-    }
-  }
-
   Future<void> _syncMeetingStatuses(List<CalendarEvent> events) async {
     final userId = _currentUserId;
     final statuses = await _meetingStatusRepository.syncStatusesForEvents(
@@ -332,34 +282,12 @@ class CalendarController extends GetxController {
   }
 
   String get _currentUserId {
-    return _authRemoteDataSource.currentUserId;
+    return _authController.currentUserId;
   }
 
-  Set<String> get _completedRecordEventIds => _meetingStatuses.values
-      .where((status) => status.recordStatus == 'completed')
-      .map((status) => status.googleEventId)
-      .toSet();
-
-  String _mapSyncError(Object error) {
-    final text = error.toString();
-    if (text.contains('missing_sheets_config')) {
-      return 'missing_sheets_config';
-    }
-    if (text.contains('missing_google_auth')) {
-      return 'missing_google_auth';
-    }
-    return 'sync_failed';
-  }
-
-  String _syncErrorMessage(Object error) {
-    switch (_mapSyncError(error)) {
-      case 'missing_sheets_config':
-        return 'GOOGLE_SHEETS_SPREADSHEET_ID 설정이 없습니다.';
-      case 'missing_google_auth':
-        return 'Google 인증이 필요합니다.';
-      default:
-        return 'Google Sheets 동기화에 실패했습니다.';
-    }
-  }
-
+  Set<String> get _completedRecordEventIds =>
+      _meetingStatuses.values
+          .where((status) => status.recordStatus == 'completed')
+          .map((status) => status.googleEventId)
+          .toSet();
 }

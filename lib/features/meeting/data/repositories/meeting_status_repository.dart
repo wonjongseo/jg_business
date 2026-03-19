@@ -2,6 +2,7 @@
 import 'package:jg_business/features/calendar/data/models/calendar_events_response.dart';
 import 'package:jg_business/features/meeting/data/datasources/meeting_status_firestore_data_source.dart';
 import 'package:jg_business/features/meeting/data/models/meeting_status_entity.dart';
+import 'package:jg_business/shared/constants/reminder_constants.dart';
 
 class MeetingStatusRepository {
   MeetingStatusRepository({
@@ -193,7 +194,9 @@ class MeetingStatusRepository {
       return 'idle';
     }
 
-    final reminderAt = start.subtract(const Duration(minutes: 1));
+    final reminderAt = start.subtract(
+      const Duration(minutes: ReminderConstants.beforeMeetingMinutes),
+    );
     return reminderAt.isAfter(now) ? 'scheduled' : 'done';
   }
 
@@ -210,7 +213,11 @@ class MeetingStatusRepository {
       return 'done';
     }
 
-    final reminderAt = end.add(const Duration(minutes: 5));
+    final reminderAt = end.add(
+      const Duration(
+        minutes: ReminderConstants.primaryAfterMeetingReminderMinute,
+      ),
+    );
     return reminderAt.isAfter(now) ? 'scheduled' : 'due';
   }
 }

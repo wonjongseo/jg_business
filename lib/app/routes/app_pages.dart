@@ -1,7 +1,7 @@
 /// GetX 페이지 등록 정보를 모아두는 라우팅 테이블이다.
 import 'package:get/get.dart';
 import 'package:jg_business/app/routes/app_routes.dart';
-import 'package:jg_business/features/auth/data/datasources/google_auth_remote_data_source.dart';
+import 'package:jg_business/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:jg_business/features/business_card/data/repositories/business_card_repository.dart';
 import 'package:jg_business/features/business_card/presentation/controllers/business_card_controller.dart';
 import 'package:jg_business/features/business_card/presentation/screens/business_card_screen.dart';
@@ -19,6 +19,7 @@ import 'package:jg_business/features/meeting/presentation/controllers/meeting_re
 import 'package:jg_business/features/meeting/presentation/screens/meeting_record_screen.dart';
 import 'package:jg_business/features/onboarding/presentation/screens/calendar_connect_intro_screen.dart';
 import 'package:jg_business/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:jg_business/features/spreadsheet_sync/data/repositories/spreadsheet_sync_repository.dart';
 import 'package:jg_business/features/splash/presentation/bindings/splash_binding.dart';
 import 'package:jg_business/features/splash/presentation/screens/splash_screen.dart';
 
@@ -46,7 +47,7 @@ abstract final class AppPages {
         return BusinessCardController(
           businessCardRepository: Get.find<BusinessCardRepository>(),
           clientRepository: Get.find<ClientRepository>(),
-          authRemoteDataSource: Get.find<GoogleAuthRemoteDataSource>(),
+          authController: Get.find<AuthController>(),
         );
       }),
     ),
@@ -67,7 +68,8 @@ abstract final class AppPages {
           repository: Get.find<MeetingRecordRepository>(),
           meetingStatusRepository: Get.find<MeetingStatusRepository>(),
           clientRepository: Get.find<ClientRepository>(),
-          authRemoteDataSource: Get.find<GoogleAuthRemoteDataSource>(),
+          spreadsheetSyncRepository: Get.find<SpreadsheetSyncRepository>(),
+          authController: Get.find<AuthController>(),
           event: event,
         );
       }),

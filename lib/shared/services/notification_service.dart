@@ -1,6 +1,9 @@
 /// 로컬 알림 초기화, 권한 확인, 캘린더 리마인더 재등록을 담당한다.
+import 'dart:io';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:jg_business/features/calendar/data/models/calendar_events_response.dart';
+import 'package:jg_business/shared/constants/reminder_constants.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 class NotificationService {
@@ -14,6 +17,7 @@ class NotificationService {
   static const _channelDescription = 'Calendar event reminders';
   static const _beforeMeetingPayloadPrefix = 'calendar_before:';
   static const _afterMeetingPayloadPrefix = 'calendar_after:';
+  static const _afterMeetingSecondPayloadPrefix = 'calendar_after_second:';
 
   NotificationDetails get _details => const NotificationDetails(
     android: AndroidNotificationDetails(
@@ -36,20 +40,32 @@ class NotificationService {
     return _notificationId('after:$eventId');
   }
 
+  int secondAfterMeetingNotificationId(String eventId) {
+    return _notificationId('after_second:$eventId');
+  }
+
   String _beforeMeetingPayload(String eventId) =>
       '$_beforeMeetingPayloadPrefix$eventId';
 
   String _afterMeetingPayload(String eventId) =>
       '$_afterMeetingPayloadPrefix$eventId';
 
+  String _secondAfterMeetingPayload(String eventId) =>
+      '$_afterMeetingSecondPayloadPrefix$eventId';
+
   Future<void> initialize() async {
     /// 알림 플러그인을 1회만 초기화한다.
+    if (Platform.isMacOS) return;
     if (_isInitialized) return;
 
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
-    const iosSettings = DarwinInitializationSettings();
+    const iosSettings = DarwinInitializationSettings(
+      defaultPresentAlert: true,
+      defaultPresentBadge: true,
+      defaultPresentSound: true,
+    );
 
     await _plugin.initialize(
       const InitializationSettings(android: androidSettings, iOS: iosSettings),
@@ -109,12 +125,14 @@ class NotificationService {
     return pending.where((request) {
       final payload = request.payload ?? '';
       return payload.startsWith(_beforeMeetingPayloadPrefix) ||
-          payload.startsWith(_afterMeetingPayloadPrefix);
+          payload.startsWith(_afterMeetingPayloadPrefix) ||
+          payload.startsWith(_afterMeetingSecondPayloadPrefix);
     }).length;
   }
 
   Future<void> scheduleBeforeMeetingReminder(CalendarEvent event) async {
     /// 단일 일정에 대한 사전 알림을 예약한다.
+    if (Platform.isMacOS) return;
     await initialize();
 
     final eventId = event.id;
@@ -123,8 +141,9 @@ class NotificationService {
     if (eventId == null || start == null) return;
     if (event.start?.isAllDay ?? false) return;
 
-    // final scheduledAt = start.subtract(const Duration(hours: 1));
-    final scheduledAt = start.subtract(const Duration(minutes: 1));
+    final scheduledAt = start.subtract(
+      const Duration(minutes: ReminderConstants.beforeMeetingMinutes),
+    );
     final now = tz.TZDateTime.now(tz.local);
     final zonedTime = tz.TZDateTime.from(scheduledAt, tz.local);
     final id = beforeMeetingNotificationId(eventId);
@@ -136,7 +155,7 @@ class NotificationService {
     await _plugin.zonedSchedule(
       id,
       event.summary ?? '予定',
-      '1時間後予定があります',
+      '間もなく予定があります',
       zonedTime,
       _details,
       payload: _beforeMeetingPayload(eventId),
@@ -147,7 +166,8 @@ class NotificationService {
   }
 
   Future<void> scheduleAfterMeetingReminder(CalendarEvent event) async {
-    /// 미팅 종료 5분 후 기록 작성을 유도하는 알림을 예약한다.
+    /// 미팅 종료 후 기록 작성을 유도하는 알림들을 예약한다.
+    if (Platform.isMacOS) return;
     await initialize();
 
     final eventId = event.id;
@@ -156,32 +176,53 @@ class NotificationService {
     if (eventId == null || end == null) return;
     if (event.end?.isAllDay ?? false) return;
 
-    final scheduledAt = end.add(const Duration(minutes: 5));
     final now = tz.TZDateTime.now(tz.local);
-    final zonedTime = tz.TZDateTime.from(scheduledAt, tz.local);
-    final id = afterMeetingNotificationId(eventId);
+    final reminderMinutes = ReminderConstants.afterMeetingReminderMinutes;
+    final reminderIds = [
+      afterMeetingNotificationId(eventId),
+      secondAfterMeetingNotificationId(eventId),
+    ];
 
-    await _plugin.cancel(id);
+    for (final id in reminderIds) {
+      await _plugin.cancel(id);
+    }
 
-    if (!zonedTime.isAfter(now)) return;
+    for (var index = 0; index < reminderMinutes.length; index++) {
+      final minute = reminderMinutes[index];
+      final scheduledAt = end.add(Duration(minutes: minute));
+      final zonedTime = tz.TZDateTime.from(scheduledAt, tz.local);
+      if (!zonedTime.isAfter(now)) {
+        continue;
+      }
 
-    await _plugin.zonedSchedule(
-      id,
-      event.summary ?? '予定',
-      'ミーティング内容を記録してください',
-      zonedTime,
-      _details,
-      payload: _afterMeetingPayload(eventId),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-    );
+      final id =
+          index == 0
+              ? afterMeetingNotificationId(eventId)
+              : secondAfterMeetingNotificationId(eventId);
+      final payload =
+          index == 0
+              ? _afterMeetingPayload(eventId)
+              : _secondAfterMeetingPayload(eventId);
+
+      await _plugin.zonedSchedule(
+        id,
+        event.summary ?? '予定',
+        'ミーティング内容を記録してください',
+        zonedTime,
+        _details,
+        payload: payload,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    }
   }
 
   Future<void> cancelForEvent(String eventId) async {
     await initialize();
     await _plugin.cancel(beforeMeetingNotificationId(eventId));
     await _plugin.cancel(afterMeetingNotificationId(eventId));
+    await _plugin.cancel(secondAfterMeetingNotificationId(eventId));
   }
 
   Future<void> resyncCalendarNotifications(
@@ -198,13 +239,15 @@ class NotificationService {
     for (final request in pending) {
       final payload = request.payload ?? '';
       if (!payload.startsWith(_beforeMeetingPayloadPrefix) &&
-          !payload.startsWith(_afterMeetingPayloadPrefix)) {
+          !payload.startsWith(_afterMeetingPayloadPrefix) &&
+          !payload.startsWith(_afterMeetingSecondPayloadPrefix)) {
         continue;
       }
 
       final eventId = payload
           .replaceFirst(_beforeMeetingPayloadPrefix, '')
-          .replaceFirst(_afterMeetingPayloadPrefix, '');
+          .replaceFirst(_afterMeetingPayloadPrefix, '')
+          .replaceFirst(_afterMeetingSecondPayloadPrefix, '');
       if (!activeEventIds.contains(eventId)) {
         await _plugin.cancel(request.id);
       }
@@ -217,6 +260,7 @@ class NotificationService {
       if (eventId == null || completedRecordEventIds.contains(eventId)) {
         if (eventId != null) {
           await _plugin.cancel(afterMeetingNotificationId(eventId));
+          await _plugin.cancel(secondAfterMeetingNotificationId(eventId));
         }
         continue;
       }

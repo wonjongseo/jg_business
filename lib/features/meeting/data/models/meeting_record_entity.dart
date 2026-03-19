@@ -1,4 +1,3 @@
-/// Firestore에 저장되는 미팅 기록 문서 모델이다.
 class MeetingRecordEntity {
   const MeetingRecordEntity({
     required this.id,
@@ -96,12 +95,12 @@ class MeetingRecordEntity {
       updatedAt: updatedAt ?? this.updatedAt,
       sheetsSyncStatus: sheetsSyncStatus ?? this.sheetsSyncStatus,
       sheetsLastAttemptAt: sheetsLastAttemptAt ?? this.sheetsLastAttemptAt,
-      sheetsLastSyncedAt: clearSheetsLastSyncedAt
-          ? null
-          : sheetsLastSyncedAt ?? this.sheetsLastSyncedAt,
-      sheetsErrorCode: clearSheetsErrorCode
-          ? null
-          : sheetsErrorCode ?? this.sheetsErrorCode,
+      sheetsLastSyncedAt:
+          clearSheetsLastSyncedAt
+              ? null
+              : sheetsLastSyncedAt ?? this.sheetsLastSyncedAt,
+      sheetsErrorCode:
+          clearSheetsErrorCode ? null : sheetsErrorCode ?? this.sheetsErrorCode,
     );
   }
 }

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/app/routes/app_routes.dart';
+import 'package:jg_business/shared/layout/app_responsive.dart';
 import 'package:jg_business/shared/services/app_launch_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -94,7 +95,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       final page = _pages[index];
                       return Center(
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 520),
+                          constraints: const BoxConstraints(
+                            maxWidth: AppResponsive.compactContentMaxWidth,
+                          ),
                           child: Container(
                             padding: const EdgeInsets.all(28),
                             decoration: BoxDecoration(

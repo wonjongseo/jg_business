@@ -2,13 +2,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/features/main/presentation/controllers/main_controller.dart';
+import 'package:jg_business/shared/layout/app_responsive.dart';
 
 class MainScreen extends GetView<MainController> {
   const MainScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isTablet = MediaQuery.sizeOf(context).width >= 900;
+    final useRailNavigation = AppResponsive.useRailNavigation(context);
 
     return Obx(
       () => DecoratedBox(
@@ -24,7 +25,7 @@ class MainScreen extends GetView<MainController> {
           body: SafeArea(
             child: Row(
               children: [
-                if (isTablet)
+                if (useRailNavigation)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
                     child: ClipRRect(
@@ -73,7 +74,7 @@ class MainScreen extends GetView<MainController> {
               ],
             ),
           ),
-          bottomNavigationBar: isTablet
+          bottomNavigationBar: useRailNavigation
               ? null
               : NavigationBar(
                   selectedIndex: controller.selectedIndex,

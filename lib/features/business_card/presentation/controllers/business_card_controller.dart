@@ -1,7 +1,7 @@
 /// 명함 OCR 초안 입력과 고객 저장을 관리한다.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:jg_business/features/auth/data/datasources/google_auth_remote_data_source.dart';
+import 'package:jg_business/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:jg_business/features/business_card/data/models/business_card_entity.dart';
 import 'package:jg_business/features/business_card/data/repositories/business_card_repository.dart';
 import 'package:jg_business/features/client/data/repositories/client_repository.dart';
@@ -12,14 +12,14 @@ class BusinessCardController extends GetxController {
   BusinessCardController({
     required BusinessCardRepository businessCardRepository,
     required ClientRepository clientRepository,
-    required GoogleAuthRemoteDataSource authRemoteDataSource,
+    required AuthController authController,
   }) : _businessCardRepository = businessCardRepository,
        _clientRepository = clientRepository,
-       _authRemoteDataSource = authRemoteDataSource;
+       _authController = authController;
 
   final BusinessCardRepository _businessCardRepository;
   final ClientRepository _clientRepository;
-  final GoogleAuthRemoteDataSource _authRemoteDataSource;
+  final AuthController _authController;
 
   final rawTextCtrl = TextEditingController();
   final companyNameCtrl = TextEditingController();
@@ -56,7 +56,7 @@ class BusinessCardController extends GetxController {
 
     try {
       isSaving.value = true;
-      final userId = _authRemoteDataSource.currentUserId;
+      final userId = _authController.currentUserId;
       final now = DateTime.now();
       final client = await _clientRepository.upsertFromBusinessCard(
         userId: userId,

@@ -1,12 +1,15 @@
 /// 다음 미팅 또는 진행 중인 미팅을 강조해서 보여주는 카드다.
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:jg_business/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:jg_business/features/calendar/data/models/calendar_events_response.dart';
 import 'package:jg_business/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:jg_business/features/main/presentation/controllers/main_controller.dart';
 import 'package:jg_business/features/main/presentation/screens/widgets/home_panel.dart';
 import 'package:jg_business/shared/theme/app_tokens.dart';
+import 'package:jg_business/shared/widgets/google_sign_in_web_button.dart';
 
 class HomeNextMeetingCard extends StatelessWidget {
   const HomeNextMeetingCard({super.key});
@@ -58,9 +61,7 @@ class _PreviewCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             '連携すると、次の予定がここに表示されます。',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.muted,
-            ),
+            style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.muted),
           ),
         ],
       ),
@@ -85,20 +86,21 @@ class _CalendarDisconnectedCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             '予定を見たくなったタイミングで連携できます。連携しないままホームを見ることもできます。',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.muted,
-            ),
+            style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.muted),
           ),
           const SizedBox(height: 16),
           Wrap(
             spacing: 10,
             runSpacing: 10,
             children: [
-              FilledButton.icon(
-                onPressed: controller.connectCalendar,
-                icon: const Icon(Icons.link_outlined),
-                label: const Text('Google Calendar を連携'),
-              ),
+              if (kIsWeb)
+                const GoogleSignInWebButton()
+              else
+                FilledButton.icon(
+                  onPressed: controller.connectCalendar,
+                  icon: const Icon(Icons.link_outlined),
+                  label: const Text('Google Calendar を連携'),
+                ),
               OutlinedButton.icon(
                 onPressed:
                     () => Get.find<MainController>().onDestinationSelected(1),
@@ -127,9 +129,7 @@ class _EmptyScheduleCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Google Calendar に今後の予定が見つかりませんでした。',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.muted,
-            ),
+            style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.muted),
           ),
         ],
       ),
@@ -150,16 +150,17 @@ class _CalendarEventCard extends StatelessWidget {
     final timeLabel = _formatTimeRange(start, end, event.location);
     final attendeeCount = event.attendees.length;
     final isOngoing = Get.find<CalendarController>().isOngoing(event);
+    final currentUserEmail =
+        Get.find<AuthController>().currentUserEmail?.trim().toLowerCase();
 
     return HomePanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
             decoration: BoxDecoration(
-              color:
-                  isOngoing ? AppColors.warningSoft : AppColors.accentSoft,
+              color: isOngoing ? AppColors.warningSoft : AppColors.accentSoft,
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
@@ -171,10 +172,8 @@ class _CalendarEventCard extends StatelessWidget {
           Text(event.summary ?? 'タイトル未設定', style: theme.textTheme.titleLarge),
           const SizedBox(height: 8),
           Text(
-            _buildMetaLine(event, attendeeCount),
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.muted,
-            ),
+            _buildMetaLine(event, attendeeCount, currentUserEmail: currentUserEmail),
+            style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.muted),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -210,12 +209,17 @@ String _formatTimeRange(DateTime? start, DateTime? end, String? location) {
   return '$startText - $endText$place';
 }
 
-String _buildMetaLine(CalendarEvent event, int attendeeCount) {
+String _buildMetaLine(
+  CalendarEvent event,
+  int attendeeCount, {
+  String? currentUserEmail,
+}) {
+  final organizerEmail = event.organizerEmail?.trim();
+  final normalizedOrganizerEmail = organizerEmail?.toLowerCase();
   final parts = <String>[
-    if (event.organizerEmail?.trim().isNotEmpty ?? false)
-      event.organizerEmail!.trim(),
+    if (organizerEmail?.isNotEmpty ?? false)
+      if (normalizedOrganizerEmail != currentUserEmail) organizerEmail!,
     if (attendeeCount > 0) '参加者 $attendeeCount 名',
-    if (event.status?.trim().isNotEmpty ?? false) event.status!.trim(),
   ];
   if (parts.isEmpty) return 'Google Calendar から取得した予定です。';
   return parts.join(' ・ ');

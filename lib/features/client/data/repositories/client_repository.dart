@@ -114,6 +114,31 @@ class ClientRepository {
     return client;
   }
 
+  Future<ClientEntity> updateClient({
+    required ClientEntity client,
+    required String companyName,
+    required String contactName,
+    required String phoneNumber,
+    required String email,
+    required String notes,
+  }) async {
+    final trimmedCompany = companyName.trim();
+    if (trimmedCompany.isEmpty) {
+      throw StateError('missing_company_name');
+    }
+
+    final updatedClient = client.copyWith(
+      companyName: trimmedCompany,
+      contactName: contactName.trim().isEmpty ? null : contactName.trim(),
+      phoneNumber: phoneNumber.trim().isEmpty ? null : phoneNumber.trim(),
+      email: email.trim().isEmpty ? null : email.trim(),
+      notes: notes.trim().isEmpty ? null : notes.trim(),
+    );
+
+    await _firestoreDataSource.upsertClient(updatedClient);
+    return updatedClient;
+  }
+
   String _buildClientId(String userId, String companyName, String contactName) {
     final base = '$userId|$companyName|$contactName'
         .trim()

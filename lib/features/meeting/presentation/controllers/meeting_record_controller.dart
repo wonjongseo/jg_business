@@ -1,14 +1,14 @@
-/// 미팅 기록 입력 화면의 로딩/저장 상태를 관리한다.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/features/client/data/models/client_entity.dart';
 import 'package:jg_business/features/client/data/repositories/client_repository.dart';
-import 'package:jg_business/features/auth/data/datasources/google_auth_remote_data_source.dart';
+import 'package:jg_business/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:jg_business/features/calendar/data/models/calendar_events_response.dart';
 import 'package:jg_business/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:jg_business/features/meeting/data/models/meeting_record_entity.dart';
 import 'package:jg_business/features/meeting/data/repositories/meeting_record_repository.dart';
 import 'package:jg_business/features/meeting/data/repositories/meeting_status_repository.dart';
+import 'package:jg_business/features/spreadsheet_sync/data/repositories/spreadsheet_sync_repository.dart';
 import 'package:jg_business/shared/utils/app_feedback.dart';
 
 class MeetingRecordController extends GetxController {
@@ -16,18 +16,21 @@ class MeetingRecordController extends GetxController {
     required MeetingRecordRepository repository,
     required MeetingStatusRepository meetingStatusRepository,
     required ClientRepository clientRepository,
-    required GoogleAuthRemoteDataSource authRemoteDataSource,
+    required SpreadsheetSyncRepository spreadsheetSyncRepository,
+    required AuthController authController,
     required CalendarEvent event,
   }) : _repository = repository,
        _meetingStatusRepository = meetingStatusRepository,
        _clientRepository = clientRepository,
-       _authRemoteDataSource = authRemoteDataSource,
+       _spreadsheetSyncRepository = spreadsheetSyncRepository,
+       _authController = authController,
        event = event;
 
   final MeetingRecordRepository _repository;
   final MeetingStatusRepository _meetingStatusRepository;
   final ClientRepository _clientRepository;
-  final GoogleAuthRemoteDataSource _authRemoteDataSource;
+  final SpreadsheetSyncRepository _spreadsheetSyncRepository;
+  final AuthController _authController;
   final CalendarEvent event;
 
   final companyNameCtrl = TextEditingController();
@@ -45,7 +48,7 @@ class MeetingRecordController extends GetxController {
   final selectedClientId = RxnString();
 
   bool get isEditMode => existingRecordId.value != null;
-  List<ClientEntity> get clients => _clients;
+  List<ClientEntity> get clients => _uniqueClients(_clients);
   String get recordDocumentId =>
       existingRecordId.value ??
       (event.id == null || event.id!.isEmpty
@@ -62,9 +65,11 @@ class MeetingRecordController extends GetxController {
   }
 
   void _prefillFromCalendar() {
-    companyNameCtrl.text = event.summary ?? '';
-    final firstAttendee = event.attendees.isNotEmpty ? event.attendees.first : null;
-    contactNameCtrl.text = firstAttendee?.label ?? '';
+    /// 일정 제목은 고객명과 같은 의미가 아니므로 회사명 필드를 자동으로 채우지 않는다.
+    /// 회사명은 등록된 고객 선택 또는 사용자의 직접 입력으로만 정한다.
+    companyNameCtrl.text = '';
+    /// 참석자는 참고 정보일 뿐 실제 고객 담당자로 단정할 수 없으므로 자동 입력하지 않는다.
+    contactNameCtrl.text = '';
   }
 
   Future<void> _loadExistingRecord() async {
@@ -84,8 +89,8 @@ class MeetingRecordController extends GetxController {
       existingRecordId.value = record.id;
       sheetsSyncStatus.value = record.sheetsSyncStatus;
       selectedClientId.value = record.clientId;
-      companyNameCtrl.text = record.companyName ?? companyNameCtrl.text;
-      contactNameCtrl.text = record.contactName ?? contactNameCtrl.text;
+      companyNameCtrl.text = record.companyName ?? '';
+      contactNameCtrl.text = record.contactName ?? '';
       summaryCtrl.text = record.summary;
       notesCtrl.text = record.notes ?? '';
       nextActionCtrl.text = record.nextAction ?? '';
@@ -96,8 +101,29 @@ class MeetingRecordController extends GetxController {
 
   Future<void> _loadClients() async {
     final clients = await _clientRepository.fetchByUser(_currentUserId);
-    _clients.assignAll(clients);
+    _clients.assignAll(_uniqueClients(clients));
+    _normalizeSelectedClientId();
     _trySelectMatchedClient();
+  }
+
+  List<ClientEntity> _uniqueClients(Iterable<ClientEntity> clients) {
+    /// 드롭다운의 value 는 반드시 하나의 항목에만 매칭되어야 하므로
+    /// 같은 id 를 가진 고객이 섞여 있으면 여기서 먼저 정리한다.
+    final uniqueById = <String, ClientEntity>{};
+    for (final client in clients) {
+      uniqueById[client.id] = client;
+    }
+    return uniqueById.values.toList();
+  }
+
+  void _normalizeSelectedClientId() {
+    final currentId = selectedClientId.value;
+    if (currentId == null) return;
+
+    final exists = _clients.any((client) => client.id == currentId);
+    if (!exists) {
+      selectedClientId.value = null;
+    }
   }
 
   void _trySelectMatchedClient() {
@@ -131,8 +157,10 @@ class MeetingRecordController extends GetxController {
   }
 
   String get _currentUserId {
-    return _authRemoteDataSource.currentUserId;
+    return _authController.currentUserId;
   }
+
+  String? get currentUserEmail => _authController.currentUserEmail;
 
   Future<void> save() async {
     /// 기록과 상태를 함께 저장한 뒤 캘린더/홈 상태를 다시 읽는다.
@@ -143,48 +171,54 @@ class MeetingRecordController extends GetxController {
 
     try {
       isSaving.value = true;
-      final recordId = existingRecordId.value ?? '${_currentUserId}_$googleEventId';
+      final recordId =
+          existingRecordId.value ?? '${_currentUserId}_$googleEventId';
       final client = await _clientRepository.upsertFromMeeting(
         userId: _currentUserId,
         selectedClientId: selectedClientId.value,
         companyName: companyNameCtrl.text.trim(),
         contactName: contactNameCtrl.text.trim(),
         googleEventId: googleEventId,
-        meetingAt: event.end?.dateTime ?? event.start?.dateTime ?? event.start?.date,
+        meetingAt:
+            event.end?.dateTime ?? event.start?.dateTime ?? event.start?.date,
       );
 
-      await _repository.save(
-        MeetingRecordEntity(
-          id: recordId,
-          userId: _currentUserId,
-          clientId: client.id,
-          googleEventId: googleEventId,
-          calendarId: 'primary',
-          title: event.summary ?? 'タイトル未設定',
-          companyName: companyNameCtrl.text.trim().isEmpty
-              ? null
-              : companyNameCtrl.text.trim(),
-          contactName: contactNameCtrl.text.trim().isEmpty
-              ? null
-              : contactNameCtrl.text.trim(),
-          scheduledStartAt: event.start?.dateTime ?? event.start?.date,
-          scheduledEndAt: event.end?.dateTime ?? event.end?.date,
-          locationName: event.location,
-          summary: summaryCtrl.text.trim(),
-          notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
-          nextAction: nextActionCtrl.text.trim().isEmpty
-              ? null
-              : nextActionCtrl.text.trim(),
-          nextActionDueAt: null,
-          status: 'completed',
-          createdAt: null,
-          updatedAt: null,
-          sheetsSyncStatus: 'pending',
-          sheetsLastAttemptAt: null,
-          sheetsLastSyncedAt: null,
-          sheetsErrorCode: null,
-        ),
+      final record = MeetingRecordEntity(
+        id: recordId,
+        userId: _currentUserId,
+        clientId: client.id,
+        googleEventId: googleEventId,
+        calendarId: 'primary',
+        title: event.summary ?? 'タイトル未設定',
+        companyName:
+            companyNameCtrl.text.trim().isEmpty
+                ? null
+                : companyNameCtrl.text.trim(),
+        contactName:
+            contactNameCtrl.text.trim().isEmpty
+                ? null
+                : contactNameCtrl.text.trim(),
+        scheduledStartAt: event.start?.dateTime ?? event.start?.date,
+        scheduledEndAt: event.end?.dateTime ?? event.end?.date,
+        locationName: event.location,
+        summary: summaryCtrl.text.trim(),
+        notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+        nextAction:
+            nextActionCtrl.text.trim().isEmpty
+                ? null
+                : nextActionCtrl.text.trim(),
+        nextActionDueAt: null,
+        status: 'completed',
+        createdAt: null,
+        updatedAt: null,
+        sheetsSyncStatus: 'pending',
+        sheetsLastAttemptAt: null,
+        sheetsLastSyncedAt: null,
+        sheetsErrorCode: null,
       );
+
+      await _repository.save(record);
+      await _syncToSheets(record);
       await _meetingStatusRepository.markRecordCompleted(
         userId: _currentUserId,
         event: event,
@@ -192,19 +226,82 @@ class MeetingRecordController extends GetxController {
 
       existingRecordId.value = recordId;
       selectedClientId.value = client.id;
-      sheetsSyncStatus.value = 'pending';
+      await _refreshSheetsSyncStatus(recordId);
       await _loadClients();
       if (Get.isRegistered<CalendarController>()) {
         await Get.find<CalendarController>().fetchCalendar(interactive: false);
       }
-      AppFeedback.success(
-        '保存完了',
-        'ミーティング記録を Firestore に保存しました。',
-      );
+      if (sheetsSyncStatus.value == 'synced') {
+        AppFeedback.success(
+          '保存完了',
+          'ミーティング記録を保存し、Google Sheets に同期しました。',
+        );
+      } else {
+        AppFeedback.info(
+          '保存完了',
+          'ミーティング記録は保存しましたが、Sheets 同期は失敗しました。',
+        );
+      }
       Get.back<void>();
     } finally {
       isSaving.value = false;
     }
+  }
+
+  Future<void> _syncToSheets(MeetingRecordEntity record) async {
+    final attemptedAt = DateTime.now();
+
+    try {
+      await _repository.updateSheetsSyncState(
+        recordId: record.id,
+        status: 'syncing',
+        attemptedAt: attemptedAt,
+        errorCode: null,
+      );
+      sheetsSyncStatus.value = 'syncing';
+
+      await _spreadsheetSyncRepository.syncMeetingRecord(record);
+
+      await _repository.updateSheetsSyncState(
+        recordId: record.id,
+        status: 'synced',
+        attemptedAt: attemptedAt,
+        syncedAt: DateTime.now(),
+        errorCode: null,
+      );
+      sheetsSyncStatus.value = 'synced';
+    } catch (error) {
+      await _repository.updateSheetsSyncState(
+        recordId: record.id,
+        status: 'failed',
+        attemptedAt: attemptedAt,
+        errorCode: _mapSyncError(error),
+      );
+      sheetsSyncStatus.value = 'failed';
+    }
+  }
+
+  Future<void> _refreshSheetsSyncStatus(String recordId) async {
+    final googleEventId = event.id;
+    if (googleEventId == null || googleEventId.isEmpty) return;
+
+    final savedRecord = await _repository.findByGoogleEventId(
+      userId: _currentUserId,
+      googleEventId: googleEventId,
+    );
+    if (savedRecord == null || savedRecord.id != recordId) return;
+    sheetsSyncStatus.value = savedRecord.sheetsSyncStatus;
+  }
+
+  String _mapSyncError(Object error) {
+    final text = error.toString();
+    if (text.contains('missing_sheets_config')) {
+      return 'missing_sheets_config';
+    }
+    if (text.contains('missing_google_auth')) {
+      return 'missing_google_auth';
+    }
+    return 'sync_failed';
   }
 
   Future<void> deleteRecord() async {
@@ -225,10 +322,7 @@ class MeetingRecordController extends GetxController {
       if (Get.isRegistered<CalendarController>()) {
         await Get.find<CalendarController>().fetchCalendar(interactive: false);
       }
-      AppFeedback.success(
-        '削除完了',
-        'ミーティング記録を削除しました。',
-      );
+      AppFeedback.success('削除完了', 'ミーティング記録を削除しました。');
       Get.back<void>();
     } finally {
       isDeleting.value = false;

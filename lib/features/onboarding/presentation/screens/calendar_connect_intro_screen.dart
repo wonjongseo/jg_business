@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/app/routes/app_routes.dart';
+import 'package:jg_business/shared/layout/app_responsive.dart';
 
 class CalendarConnectIntroScreen extends StatelessWidget {
   const CalendarConnectIntroScreen({super.key});
@@ -20,7 +21,9 @@ class CalendarConnectIntroScreen extends StatelessWidget {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
+              constraints: const BoxConstraints(
+                maxWidth: AppResponsive.mediumContentMaxWidth,
+              ),
               child: Container(
                 padding: const EdgeInsets.all(28),
                 decoration: BoxDecoration(

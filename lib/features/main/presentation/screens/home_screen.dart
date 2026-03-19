@@ -1,7 +1,5 @@
 /// 오늘의 영업 흐름을 요약해서 보여주는 홈 화면이다.
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:jg_business/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:jg_business/features/main/presentation/screens/widgets/home_hero_summary_card.dart';
 import 'package:jg_business/features/main/presentation/screens/widgets/home_next_meeting_card.dart';
 import 'package:jg_business/features/main/presentation/screens/widgets/home_pending_records_card.dart';
@@ -31,21 +29,15 @@ class HomeScreen extends StatelessWidget {
                   delegate: SliverChildListDelegate([
                     const HomeHeroSummaryCard(),
                     const SizedBox(height: 18),
-                    const _MeetingSectionHeader(),
+                    const HomeSectionHeader(title: '次の面談'),
                     const SizedBox(height: 10),
                     const HomeNextMeetingCard(),
                     const SizedBox(height: 28),
-                    const HomeSectionHeader(
-                      title: '記録待ち',
-                      actionLabel: '確認する',
-                    ),
+                    const HomeSectionHeader(title: '記録待ち'),
                     const SizedBox(height: 10),
                     const HomePendingRecordsCard(),
                     const SizedBox(height: 28),
-                    const HomeSectionHeader(
-                      title: '最近の記録',
-                      actionLabel: '詳細を見る',
-                    ),
+                    const HomeSectionHeader(title: '最近の記録'),
                     const SizedBox(height: 10),
                     const HomeRecentRecordsCard(),
                     const SizedBox(height: 28),
@@ -56,18 +48,6 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _MeetingSectionHeader extends StatelessWidget {
-  const _MeetingSectionHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return const HomeSectionHeader(
-      title: '次の面談',
-      actionLabel: 'カレンダーを開く',
     );
   }
 }

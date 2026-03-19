@@ -9,6 +9,10 @@
         android:label="jg_business"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+       
         <activity
             android:name=".MainActivity"
             android:exported="true"

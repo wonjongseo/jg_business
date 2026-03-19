@@ -21,15 +21,8 @@ class GoogleCalendarRemoteDataSource {
   Future<List<CalendarEvent>> fetchEvents({bool interactive = true}) async {
     try {
       final now = DateTime.now();
-      final timeMin = DateTime(now.year, now.month, now.day);
-      final timeMax = DateTime(
-        now.year,
-        now.month + 6,
-        now.day,
-        23,
-        59,
-        59,
-      );
+      final timeMin = DateTime(now.year, now.month - 6, now.day);
+      final timeMax = DateTime(now.year, now.month + 6, now.day, 23, 59, 59);
 
       final headers = await _authRemoteDataSource.getAuthorizationHeaders(
         interactive: interactive,

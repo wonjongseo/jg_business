@@ -122,9 +122,8 @@ class CalendarAttendee {
   final String? displayName;
   final String? responseStatus;
 
-  String get label => displayName?.trim().isNotEmpty == true
-      ? displayName!
-      : (email ?? '');
+  String get label =>
+      displayName?.trim().isNotEmpty == true ? displayName! : (email ?? '');
 
   factory CalendarAttendee.fromJson(Map<String, dynamic> json) {
     return CalendarAttendee(
@@ -135,10 +134,12 @@ class CalendarAttendee {
   }
 
   Map<String, dynamic> toRequestJson() {
-    return {
-      if (email != null) 'email': email,
-    };
+    return {if (email != null) 'email': email};
   }
+
+  @override
+  String toString() =>
+      'CalendarAttendee(email: $email, displayName: $displayName, responseStatus: $responseStatus)';
 }
 
 class EventDateTime {

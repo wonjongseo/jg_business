@@ -232,24 +232,11 @@ class _MeetingRecordPreviewCard extends StatelessWidget {
               record.nextAction!.trim().isNotEmpty)
             _RecordLine(label: '次のアクション', value: record.nextAction!),
           const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Obx(() {
-              final isSyncing = controller.isSyncingRecord(record.id);
-              return FilledButton.tonalIcon(
-                onPressed: isSyncing
-                    ? null
-                    : () => controller.syncRecordToSheets(event),
-                icon: isSyncing
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.table_view_outlined),
-                label: Text(isSyncing ? '同期中...' : 'Sheets に同期'),
-              );
-            }),
+          Text(
+            'ミーティング記録は保存後に Google Sheets へ自動同期されます。',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: const Color(0xFF556070),
+            ),
           ),
         ],
       ),

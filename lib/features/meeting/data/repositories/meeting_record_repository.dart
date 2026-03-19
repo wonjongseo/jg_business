@@ -46,4 +46,14 @@ class MeetingRecordRepository {
   Future<List<MeetingRecordEntity>> recentByUser(String userId) {
     return _firestoreDataSource.fetchRecentByUser(userId);
   }
+
+  Future<List<MeetingRecordEntity>> byClientId({
+    required String userId,
+    required String clientId,
+  }) {
+    return _firestoreDataSource.fetchByClientId(
+      userId: userId,
+      clientId: clientId,
+    );
+  }
 }

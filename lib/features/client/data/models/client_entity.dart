@@ -32,4 +32,32 @@ class ClientEntity {
     }
     return companyName;
   }
+
+  ClientEntity copyWith({
+    String? id,
+    String? userId,
+    String? companyName,
+    String? contactName,
+    String? phoneNumber,
+    String? email,
+    String? notes,
+    List<String>? linkedGoogleEventIds,
+    DateTime? lastMeetingAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return ClientEntity(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      companyName: companyName ?? this.companyName,
+      contactName: contactName ?? this.contactName,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      email: email ?? this.email,
+      notes: notes ?? this.notes,
+      linkedGoogleEventIds: linkedGoogleEventIds ?? this.linkedGoogleEventIds,
+      lastMeetingAt: lastMeetingAt ?? this.lastMeetingAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }
