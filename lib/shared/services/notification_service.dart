@@ -55,7 +55,7 @@ class NotificationService {
 
   Future<void> initialize() async {
     /// 알림 플러그인을 1회만 초기화한다.
-    if (Platform.isMacOS) return;
+
     if (_isInitialized) return;
 
     const androidSettings = AndroidInitializationSettings(
@@ -167,7 +167,7 @@ class NotificationService {
 
   Future<void> scheduleAfterMeetingReminder(CalendarEvent event) async {
     /// 미팅 종료 후 기록 작성을 유도하는 알림들을 예약한다.
-    if (Platform.isMacOS) return;
+
     await initialize();
 
     final eventId = event.id;
