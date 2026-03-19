@@ -34,8 +34,11 @@ class CalendarEventControler extends GetxController {
     required DateTime dateTime,
   }) : _remoteDataSource = remoteDataSource,
        selectedEvent = Rxn<CalendarEvent>(event),
-       startDt = dateTime.obs,
-       endDt = dateTime.add(const Duration(hours: 1)).obs,
+       startDt = _resolveInitialStart(dateTime, event).obs,
+       endDt = _resolveInitialStart(
+         dateTime,
+         event,
+       ).add(const Duration(hours: 1)).obs,
        isAllDay = false.obs;
 
   final GoogleCalendarRemoteDataSource _remoteDataSource;
@@ -49,6 +52,21 @@ class CalendarEventControler extends GetxController {
   final teCtrls = _TextEditingControllers();
 
   bool get isEditMode => selectedEvent.value != null;
+
+  static DateTime _resolveInitialStart(DateTime dateTime, CalendarEvent? event) {
+    if (event != null) {
+      return dateTime;
+    }
+
+    final now = DateTime.now();
+    return DateTime(
+      dateTime.year,
+      dateTime.month,
+      dateTime.day,
+      now.hour,
+      now.minute,
+    );
+  }
 
   @override
   void onInit() {

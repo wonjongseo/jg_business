@@ -6,6 +6,7 @@ import 'package:jg_business/app/routes/app_routes.dart';
 import 'package:jg_business/features/calendar/data/models/calendar_events_response.dart';
 import 'package:jg_business/features/calendar/presentation/controllers/calendar_controller.dart';
 import 'package:jg_business/features/meeting/data/models/meeting_record_entity.dart';
+import 'package:jg_business/shared/layout/app_responsive.dart';
 import 'package:jg_business/shared/theme/app_tokens.dart';
 
 class CalendarEventDetailScreen extends GetView<CalendarController> {
@@ -18,6 +19,7 @@ class CalendarEventDetailScreen extends GetView<CalendarController> {
     final theme = Theme.of(context);
     final start = event.start?.dateTime ?? event.start?.date;
     final end = event.end?.dateTime ?? event.end?.date;
+    final useHorizontalActions = !AppResponsive.isMobileWidth(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -113,34 +115,75 @@ class CalendarEventDetailScreen extends GetView<CalendarController> {
                 );
               }),
               const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: Obx(() {
-                  final recordStatus =
-                      controller.statusForEvent(event)?.recordStatus ?? 'idle';
-                  return FilledButton.icon(
-                    onPressed: () => Get.toNamed(
-                      AppRoutes.meetingRecord,
-                      arguments: event,
+              if (useHorizontalActions)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Obx(() {
+                        final recordStatus =
+                            controller.statusForEvent(event)?.recordStatus ??
+                            'idle';
+                        return FilledButton.icon(
+                          onPressed: () => Get.toNamed(
+                            AppRoutes.meetingRecord,
+                            arguments: event,
+                          ),
+                          icon: const Icon(Icons.note_add_outlined),
+                          label: Text(
+                            recordStatus == 'completed'
+                                ? 'ミーティング記録を修正'
+                                : 'ミーティング記録を作成',
+                          ),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                          ),
+                        );
+                      }),
                     ),
-                    icon: const Icon(Icons.note_add_outlined),
-                    label: Text(
-                      recordStatus == 'completed'
-                          ? 'ミーティング記録を修正'
-                          : 'ミーティング記録を作成',
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton.tonalIcon(
+                        onPressed: () => controller.openEventEditor(event),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('この予定を編集'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                        ),
+                      ),
                     ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.tonalIcon(
-                  onPressed: () => controller.openEventEditor(event),
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('この予定を編集'),
+                  ],
+                )
+              else ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: Obx(() {
+                    final recordStatus =
+                        controller.statusForEvent(event)?.recordStatus ??
+                        'idle';
+                    return FilledButton.icon(
+                      onPressed: () => Get.toNamed(
+                        AppRoutes.meetingRecord,
+                        arguments: event,
+                      ),
+                      icon: const Icon(Icons.note_add_outlined),
+                      label: Text(
+                        recordStatus == 'completed'
+                            ? 'ミーティング記録を修正'
+                            : 'ミーティング記録を作成',
+                      ),
+                    );
+                  }),
                 ),
-              ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.tonalIcon(
+                    onPressed: () => controller.openEventEditor(event),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('この予定を編集'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

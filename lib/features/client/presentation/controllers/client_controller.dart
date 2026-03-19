@@ -35,6 +35,11 @@ class ClientController extends GetxController {
   bool get isSaving => _isSaving.value;
   String? get selectedClientId => _selectedClientId.value;
   List<MeetingRecordEntity> get selectedClientRecords => _selectedClientRecords;
+  List<MeetingRecordEntity> get nextActionRecords =>
+      _selectedClientRecords
+          .where((record) => (record.nextAction ?? '').trim().isNotEmpty)
+          .take(3)
+          .toList();
 
   List<ClientEntity> get filteredClients {
     final query = searchCtrl.text.trim().toLowerCase();

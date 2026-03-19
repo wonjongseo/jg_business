@@ -74,12 +74,62 @@ class _ClientListHeader extends GetView<ClientController> {
           ],
         ),
         const SizedBox(height: 8),
-        TextField(
-          controller: controller.searchCtrl,
-          decoration: const InputDecoration(
-            hintText: '会社名または担当者名で検索',
-            prefixIcon: Icon(Icons.search),
-          ),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: controller.searchCtrl,
+          builder: (context, value, _) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.78),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppColors.outlineSoft),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x0D0F172A),
+                    blurRadius: 16,
+                    offset: Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: controller.searchCtrl,
+                decoration: InputDecoration(
+                  hintText: '会社名または担当者名で検索',
+                  hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.muted,
+                  ),
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon:
+                      value.text.isEmpty
+                          ? null
+                          : IconButton(
+                            onPressed: controller.searchCtrl.clear,
+                            icon: const Icon(Icons.close),
+                          ),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(
+                      color: AppColors.accent,
+                      width: 1.4,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -92,109 +142,133 @@ class _ClientListPane extends GetView<ClientController> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final items = controller.filteredClients;
 
-    return AppPanel(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (AppResponsive.useSplitClientLayout(context))
-            const _ClientListHeader(),
-          if (AppResponsive.useSplitClientLayout(context))
+    return Obx(() {
+      final items = controller.filteredClients;
+      final selectedClientId = controller.selectedClientId;
+
+      return AppPanel(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (AppResponsive.useSplitClientLayout(context))
+              const _ClientListHeader(),
+            if (AppResponsive.useSplitClientLayout(context))
+              const SizedBox(height: 16),
+            Text('登録済み顧客 ${items.length}件', style: theme.textTheme.titleMedium),
             const SizedBox(height: 16),
-          Text('登録済み顧客 ${items.length}件', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 16),
-          if (items.isEmpty)
-            Expanded(
-              child: Center(
-                child: Text(
-                  'まだ登録された顧客がありません。\n面談記録または名刺登録から顧客が作成されます。',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.muted,
+            if (items.isEmpty)
+              Expanded(
+                child: Center(
+                  child: Text(
+                    '該当する顧客がありません。\n検索条件を変えるか、新しい顧客を登録してください。',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.muted,
+                    ),
                   ),
                 ),
-              ),
-            )
-          else
-            Expanded(
-              child: ListView.separated(
-                itemCount: items.length,
-                separatorBuilder: (_, __) => const Divider(height: 20),
-                itemBuilder: (context, index) {
-                  final client = items[index];
-                  final selected = controller.selectedClientId == client.id;
-                  final useSplitLayout = AppResponsive.useSplitClientLayout(
-                    context,
-                  );
-                  return InkWell(
-                    onTap: () async {
-                      await controller.selectClient(client.id);
-                      if (!useSplitLayout && context.mounted) {
-                        Get.to(() => _ClientDetailMobileScreen());
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color:
-                            selected
-                                ? AppColors.accentSoft
-                                : Colors.transparent,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            client.companyName,
-                            style: theme.textTheme.titleMedium,
+              )
+            else
+              Expanded(
+                child: ListView.separated(
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const Divider(height: 20),
+                  itemBuilder: (context, index) {
+                    final client = items[index];
+                    final selected = selectedClientId == client.id;
+                    final useSplitLayout = AppResponsive.useSplitClientLayout(
+                      context,
+                    );
+                    return InkWell(
+                      onTap: () async {
+                        await controller.selectClient(client.id);
+                        if (!useSplitLayout && context.mounted) {
+                          Get.to(() => _ClientDetailMobileScreen());
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color:
+                              selected
+                                  ? AppColors.accentSoft
+                                  : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color:
+                                selected
+                                    ? AppColors.accent
+                                    : AppColors.outlineSoft,
                           ),
-                          if (client.contactName?.trim().isNotEmpty ==
-                              true) ...[
-                            const SizedBox(height: 6),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              client.contactName!,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: AppColors.muted,
-                              ),
+                              client.companyName,
+                              style: theme.textTheme.titleMedium,
                             ),
-                          ],
-                          const SizedBox(height: 8),
-                          Text(
-                            '連携面談 ${client.linkedGoogleEventIds.length}件',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppColors.muted,
-                            ),
-                          ),
-                          if (!useSplitLayout) ...[
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Text(
-                                  '詳細を見る',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: AppColors.muted,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                            if (client.contactName?.trim().isNotEmpty ==
+                                true) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                client.contactName!,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: AppColors.muted,
                                 ),
-                                const Spacer(),
-                                const Icon(Icons.chevron_right, size: 18),
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _ListInfoPill(
+                                  label: '連携面談',
+                                  value:
+                                      '${client.linkedGoogleEventIds.length}件',
+                                ),
+                                _ListInfoPill(
+                                  label: '最近接点',
+                                  value:
+                                      client.lastMeetingAt == null
+                                          ? '未設定'
+                                          : DateFormat(
+                                            'MM/dd',
+                                          ).format(client.lastMeetingAt!),
+                                ),
                               ],
                             ),
+                            if (!useSplitLayout) ...[
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Text(
+                                    '詳細を見る',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: AppColors.muted,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  const Icon(Icons.chevron_right, size: 18),
+                                ],
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 }
 
@@ -259,17 +333,43 @@ class _ClientDetailContent extends GetView<ClientController> {
                               style: theme.textTheme.headlineSmall,
                             ),
                           ),
-                          OutlinedButton.icon(
-                            onPressed:
-                                controller.isSaving
-                                    ? null
-                                    : () => _showClientEditSheet(
-                                      context: context,
-                                      controller: controller,
-                                      client: client,
+                          PopupMenuButton<_ClientAction>(
+                            onSelected: (action) {
+                              switch (action) {
+                                case _ClientAction.edit:
+                                  _showClientEditSheet(
+                                    context: context,
+                                    controller: controller,
+                                    client: client,
+                                  );
+                                case _ClientAction.createRecord:
+                                  _openLatestLinkedMeetingRecord(client);
+                              }
+                            },
+                            itemBuilder:
+                                (context) => [
+                                  const PopupMenuItem(
+                                    value: _ClientAction.edit,
+                                    child: ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      leading: Icon(Icons.edit_outlined),
+                                      title: Text('顧客編集'),
                                     ),
-                            icon: const Icon(Icons.edit_outlined),
-                            label: const Text('編集'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: _ClientAction.createRecord,
+                                    enabled: _hasLinkedCalendarEvent(client),
+                                    child: const ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      leading: Icon(Icons.note_add_outlined),
+                                      title: Text('記録作成'),
+                                    ),
+                                  ),
+                                ],
+                            child: const Padding(
+                              padding: EdgeInsets.all(8),
+                              child: Icon(Icons.more_horiz),
+                            ),
                           ),
                         ],
                       ),
@@ -325,6 +425,29 @@ class _ClientDetailContent extends GetView<ClientController> {
                             color: AppColors.muted,
                           ),
                         ),
+                      ),
+                      const SizedBox(height: 16),
+                      _DetailSection(
+                        title: '次のアクション',
+                        child:
+                            controller.nextActionRecords.isEmpty
+                                ? Text(
+                                  '設定された次のアクションはありません。',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: AppColors.muted,
+                                  ),
+                                )
+                                : Column(
+                                  children: [
+                                    for (final record
+                                        in controller.nextActionRecords) ...[
+                                      _NextActionTile(record: record),
+                                      if (record !=
+                                          controller.nextActionRecords.last)
+                                        const Divider(height: 20),
+                                    ],
+                                  ],
+                                ),
                       ),
                       const SizedBox(height: 16),
                       _DetailSection(
@@ -461,10 +584,11 @@ Future<void> _showClientEditSheet({
 }
 
 class _DetailSection extends StatelessWidget {
-  const _DetailSection({required this.title, required this.child});
+  const _DetailSection({required this.title, required this.child, this.action});
 
   final String title;
   final Widget child;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -480,10 +604,41 @@ class _DetailSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: theme.textTheme.titleMedium),
+          Row(
+            children: [
+              Expanded(child: Text(title, style: theme.textTheme.titleMedium)),
+              if (action != null) action!,
+            ],
+          ),
           const SizedBox(height: 12),
           child,
         ],
+      ),
+    );
+  }
+}
+
+class _ListInfoPill extends StatelessWidget {
+  const _ListInfoPill({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.outlineSoft,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$label $value',
+        style: theme.textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -530,71 +685,163 @@ class _RecordPreviewTile extends StatelessWidget {
       _ => ('未同期', AppColors.outlineSoft),
     };
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                record.title,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.outlineSoft),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (schedule != null)
+                      Text(
+                        DateFormat('yyyy/MM/dd HH:mm').format(schedule),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.muted,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    if (schedule != null) const SizedBox(height: 6),
+                    Text(
+                      record.title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: syncColor,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  syncLabel,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            record.summary,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium,
+          ),
+          if (record.nextAction?.trim().isNotEmpty == true) ...[
+            const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: syncColor,
-                borderRadius: BorderRadius.circular(999),
+                color: AppColors.outlineSoft,
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: Text(
-                syncLabel,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '次のアクション',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.muted,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(record.nextAction!, style: theme.textTheme.bodySmall),
+                ],
               ),
             ),
           ],
-        ),
-
-        const SizedBox(height: 4),
-        Text(record.summary, style: theme.textTheme.bodyMedium),
-        if (record.notes?.trim().isNotEmpty == true) ...[
-          const SizedBox(height: 6),
-          Text(
-            record.notes!,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.muted),
-          ),
-        ],
-        if (record.nextAction?.trim().isNotEmpty == true) ...[
-          const SizedBox(height: 6),
-          Text(
-            '次のアクション: ${record.nextAction!}',
-            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.muted),
-          ),
-        ],
-        if (schedule != null) ...[
-          const SizedBox(height: 6),
-          Text(
-            DateFormat('yyyy/MM/dd HH:mm').format(schedule),
-            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.muted),
-          ),
-        ],
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            OutlinedButton.icon(
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
               onPressed: () => _openMeetingRecordEditor(record),
               icon: const Icon(Icons.edit_outlined, size: 18),
               label: const Text('記録を編集'),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NextActionTile extends StatelessWidget {
+  const _NextActionTile({required this.record});
+
+  final MeetingRecordEntity record;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          margin: const EdgeInsets.only(top: 6),
+          decoration: const BoxDecoration(
+            color: AppColors.warning,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                record.nextAction ?? '',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                record.title,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.muted,
+                ),
+              ),
+              if (record.scheduledStartAt != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  DateFormat(
+                    'yyyy/MM/dd HH:mm',
+                  ).format(record.scheduledStartAt!),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.muted,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        TextButton(
+          onPressed: () => _openMeetingRecordEditor(record),
+          child: const Text('編集'),
         ),
       ],
     );
@@ -614,6 +861,47 @@ void _openMeetingRecordEditor(MeetingRecordEntity record) {
     }
   }
 }
+
+void _openLatestLinkedMeetingRecord(ClientEntity client) {
+  if (!Get.isRegistered<CalendarController>()) {
+    return;
+  }
+
+  final calendarController = Get.find<CalendarController>();
+  final linkedEvents =
+      calendarController.events
+          .where(
+            (event) =>
+                event.id != null &&
+                client.linkedGoogleEventIds.contains(event.id),
+          )
+          .toList()
+        ..sort((a, b) {
+          final left = a.start?.dateTime ?? a.start?.date ?? DateTime(1970);
+          final right = b.start?.dateTime ?? b.start?.date ?? DateTime(1970);
+          return right.compareTo(left);
+        });
+
+  if (linkedEvents.isEmpty) {
+    return;
+  }
+
+  Get.toNamed(AppRoutes.meetingRecord, arguments: linkedEvents.first);
+}
+
+bool _hasLinkedCalendarEvent(ClientEntity client) {
+  if (!Get.isRegistered<CalendarController>()) {
+    return false;
+  }
+
+  final calendarController = Get.find<CalendarController>();
+  return calendarController.events.any(
+    (event) =>
+        event.id != null && client.linkedGoogleEventIds.contains(event.id),
+  );
+}
+
+enum _ClientAction { edit, createRecord }
 
 Future<void> _showAllClientRecordsSheet(
   BuildContext context,

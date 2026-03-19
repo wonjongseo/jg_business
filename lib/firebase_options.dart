@@ -26,15 +26,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -72,6 +66,25 @@ class DefaultFirebaseOptions {
     authDomain: 'jgbusiness-147a8.firebaseapp.com',
     storageBucket: 'jgbusiness-147a8.firebasestorage.app',
     measurementId: 'G-PXMPSX6T7B',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyCVX5NV1W1P_4pSMg57zrzNwov5MDai9EE',
+    appId: '1:118577179246:ios:8232a59fef07a2509d947f',
+    messagingSenderId: '118577179246',
+    projectId: 'jgbusiness-147a8',
+    storageBucket: 'jgbusiness-147a8.firebasestorage.app',
+    iosBundleId: 'com.example.jgBusiness',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyDF5DCKDkUkKq-05gP4y3fCbJQvk272QHk',
+    appId: '1:118577179246:web:c65d7df5363bbf899d947f',
+    messagingSenderId: '118577179246',
+    projectId: 'jgbusiness-147a8',
+    authDomain: 'jgbusiness-147a8.firebaseapp.com',
+    storageBucket: 'jgbusiness-147a8.firebasestorage.app',
+    measurementId: 'G-LRTD2WRKEK',
   );
 
 }

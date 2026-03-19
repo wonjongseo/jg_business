@@ -1,5 +1,4 @@
-/// 월간 캘린더와 영업용 일정 요약 리스트를 함께 보여주는 메인 화면이다.
-import 'package:calendar_view/calendar_view.dart';
+/// 주간 기본 보기와 확장형 월간 캘린더를 함께 보여주는 메인 화면이다.
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -9,6 +8,7 @@ import 'package:jg_business/features/calendar/presentation/controllers/calendar_
 import 'package:jg_business/shared/layout/app_responsive.dart';
 import 'package:jg_business/shared/theme/app_tokens.dart';
 import 'package:jg_business/shared/widgets/google_sign_in_web_button.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class CalendarScreen extends GetView<CalendarController> {
   const CalendarScreen({super.key});
@@ -46,52 +46,10 @@ class CalendarScreen extends GetView<CalendarController> {
               children: [
                 const _CalendarHeader(),
                 const SizedBox(height: 16),
-                SizedBox(
-                  height: 380,
-                  child: MonthView<CalendarEvent>(
-                    controller: controller.calendarEventController,
-                    initialMonth: controller.focusedDay.value,
-                    startDay: WeekDays.sunday,
-                    hideDaysNotInMonth: true,
-                    weekDayBuilder: (index) {
-                      const labels = ['日', '月', '火', '水', '木', '金', '土'];
-                      return Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        alignment: Alignment.center,
-                        color: Colors.white,
-                        child: Text(
-                          labels[index],
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      );
-                    },
-                    headerBuilder: (date) {
-                      return Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          '${date.year}.${date.month}',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      );
-                    },
-                    onCellTap: (events, date) {
-                      controller.syncFocusedDay(date);
-                    },
-                    onEventTap: (event, date) {
-                      controller.syncFocusedDay(date);
-                      if (event.event != null) {
-                        controller.openEventDetail(event.event!);
-                      }
-                    },
-                    // Keep the lower list aligned with the month currently visible.
-                    onPageChange:
-                        (date, pageIndex) => controller.syncFocusedDay(date),
+                Obx(
+                  () => _MonthCalendarPanel(
+                    controller: controller,
+                    isExpanded: controller.isMonthCalendarExpanded.value,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -108,20 +66,152 @@ class CalendarScreen extends GetView<CalendarController> {
                   events: controller.upcomingEvents,
                   emptyMessage: '今後の予定はありません。',
                 ),
-                const SizedBox(height: 20),
-                Obx(
-                  () => _EventSection(
-                    title:
-                        '${DateFormat('M月d日(E)', 'ja_JP').format(controller.focusedDay.value)} の予定',
-                    subtitle: '選択した日付の予定一覧です。',
-                    events: controller.focusedDayEvents,
-                    emptyMessage: 'この日の予定はありません。',
-                  ),
-                ),
               ],
             ),
           );
         }),
+      ),
+    );
+  }
+}
+
+class _MonthCalendarPanel extends StatelessWidget {
+  const _MonthCalendarPanel({
+    required this.controller,
+    required this.isExpanded,
+  });
+
+  final CalendarController controller;
+  final bool isExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    final calendarFormat = isExpanded
+        ? CalendarFormat.month
+        : CalendarFormat.week;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.outlineSoft),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: controller.toggleMonthCalendar,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_month_outlined),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '月カレンダー',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Text(
+                          isExpanded ? 'タップで閉じます' : '必要なときだけ月表示を開けます',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: isExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 220),
+                    child: const Icon(Icons.keyboard_arrow_down),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: TableCalendar<CalendarEvent>(
+              locale: 'ja_JP',
+              firstDay: DateTime.utc(2020, 1, 1),
+              lastDay: DateTime.utc(2035, 12, 31),
+              focusedDay: controller.focusedDay.value,
+              calendarFormat: calendarFormat,
+              startingDayOfWeek: StartingDayOfWeek.sunday,
+              availableGestures:
+                  kIsWeb
+                      ? AvailableGestures.none
+                      : AvailableGestures.horizontalSwipe,
+              selectedDayPredicate:
+                  (day) => isSameDay(day, controller.focusedDay.value),
+              eventLoader: controller.eventsForDate,
+              formatAnimationDuration: const Duration(milliseconds: 260),
+              formatAnimationCurve: Curves.easeOutCubic,
+              daysOfWeekHeight: 32,
+              rowHeight: AppResponsive.isDesktopWidth(context) ? 56 : 48,
+              headerStyle: HeaderStyle(
+                titleCentered: true,
+                formatButtonVisible: false,
+                leftChevronVisible: true,
+                rightChevronVisible: true,
+                titleTextStyle: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              daysOfWeekStyle: const DaysOfWeekStyle(
+                weekendStyle: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                weekdayStyle: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              calendarStyle: CalendarStyle(
+                outsideDaysVisible: isExpanded,
+                markersMaxCount: 1,
+                markerDecoration: const BoxDecoration(
+                  color: AppColors.accent,
+                  shape: BoxShape.circle,
+                ),
+                selectedDecoration: const BoxDecoration(
+                  color: AppColors.accent,
+                  shape: BoxShape.circle,
+                ),
+                todayDecoration: BoxDecoration(
+                  color: AppColors.accent.withOpacity(0.18),
+                  shape: BoxShape.circle,
+                ),
+                todayTextStyle: const TextStyle(
+                  color: AppColors.accent,
+                  fontWeight: FontWeight.w700,
+                ),
+                selectedTextStyle: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+                defaultTextStyle: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                ),
+                weekendTextStyle: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              onDaySelected: (selectedDay, focusedDay) {
+                controller.syncFocusedDay(selectedDay);
+                Get.to(() => _SelectedDayEventsScreen(selectedDate: selectedDay));
+              },
+              onPageChanged: controller.syncFocusedDay,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -140,9 +230,7 @@ class _CalendarHeader extends GetView<CalendarController> {
         const SizedBox(height: 6),
         Text(
           'Google Calendar と連携した予定を、月表示と営業用リストの両方で確認できます。',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: AppColors.muted,
-          ),
+          style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.muted),
         ),
       ],
     );
@@ -236,9 +324,7 @@ class _EventSection extends GetView<CalendarController> {
         const SizedBox(height: 6),
         Text(
           subtitle,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: AppColors.muted,
-          ),
+          style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.muted),
         ),
         const SizedBox(height: 12),
         if (events.isEmpty)
@@ -291,10 +377,7 @@ class _EventListTile extends GetView<CalendarController> {
                 height: 12,
                 margin: const EdgeInsets.only(top: 4),
                 decoration: BoxDecoration(
-                  color:
-                      isOngoing
-                          ? AppColors.warning
-                          : AppColors.accent,
+                  color: isOngoing ? AppColors.warning : AppColors.accent,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -333,6 +416,36 @@ class _EventListTile extends GetView<CalendarController> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectedDayEventsScreen extends GetView<CalendarController> {
+  const _SelectedDayEventsScreen({required this.selectedDate});
+
+  final DateTime selectedDate;
+
+  @override
+  Widget build(BuildContext context) {
+    final events = controller.eventsForDate(selectedDate);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(DateFormat('M月d日(E)', 'ja_JP').format(selectedDate)),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          children: [
+            _EventSection(
+              title: 'この日の予定',
+              subtitle: '選択した日付に登録された予定一覧です。',
+              events: events,
+              emptyMessage: 'この日の予定はありません。',
+            ),
+          ],
         ),
       ),
     );

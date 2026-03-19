@@ -1,4 +1,3 @@
-/// 모바일/태블릿 공용 메인 셸과 탭 내비게이션을 구성한다.
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/features/main/presentation/controllers/main_controller.dart';
@@ -74,20 +73,21 @@ class MainScreen extends GetView<MainController> {
               ],
             ),
           ),
-          bottomNavigationBar: useRailNavigation
-              ? null
-              : NavigationBar(
-                  selectedIndex: controller.selectedIndex,
-                  onDestinationSelected: controller.onDestinationSelected,
-                  destinations: [
-                    for (final destination in controller.destinations)
-                      NavigationDestination(
-                        icon: Icon(destination.icon),
-                        selectedIcon: Icon(destination.selectedIcon),
-                        label: destination.label,
-                      ),
-                  ],
-                ),
+          bottomNavigationBar:
+              useRailNavigation
+                  ? null
+                  : NavigationBar(
+                    selectedIndex: controller.selectedIndex,
+                    onDestinationSelected: controller.onDestinationSelected,
+                    destinations: [
+                      for (final destination in controller.destinations)
+                        NavigationDestination(
+                          icon: Icon(destination.icon),
+                          selectedIcon: Icon(destination.selectedIcon),
+                          label: destination.label,
+                        ),
+                    ],
+                  ),
         ),
       ),
     );

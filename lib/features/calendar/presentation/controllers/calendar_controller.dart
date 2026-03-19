@@ -1,11 +1,10 @@
 /// 캘린더 탭과 홈 대시보드에서 공용으로 쓰는 일정 상태 컨트롤러다.
-import 'package:calendar_view/calendar_view.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/app/routes/app_routes.dart';
 import 'package:jg_business/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:jg_business/features/calendar/data/datasources/google_calendar_remote_data_source.dart';
 import 'package:jg_business/features/calendar/data/models/calendar_events_response.dart';
-import 'package:jg_business/features/calendar/presentation/mappers/calendar_event_mapper.dart';
 import 'package:jg_business/features/calendar/presentation/screens/calendar_event_screen.dart';
 import 'package:jg_business/features/meeting/data/models/meeting_record_entity.dart';
 import 'package:jg_business/features/meeting/data/models/meeting_status_entity.dart';
@@ -31,7 +30,6 @@ class CalendarController extends GetxController {
   final AuthController _authController;
   final MeetingRecordRepository _meetingRecordRepository;
   final MeetingStatusRepository _meetingStatusRepository;
-
   final _isLoading = false.obs;
   bool get isLoading => _isLoading.value;
 
@@ -58,9 +56,8 @@ class CalendarController extends GetxController {
     return null;
   }
 
-  final calendarEventController = EventController<CalendarEvent>();
-
   final focusedDay = DateTime.now().obs;
+  final isMonthCalendarExpanded = false.obs;
   Worker? _authSessionWorker;
 
   List<CalendarEvent> get todayEvents {
@@ -81,10 +78,8 @@ class CalendarController extends GetxController {
         .toList();
   }
 
-  List<CalendarEvent> get focusedDayEvents {
-    return _events
-        .where((event) => occursOnDate(event, focusedDay.value))
-        .toList();
+  List<CalendarEvent> eventsForDate(DateTime date) {
+    return _events.where((event) => occursOnDate(event, date)).toList();
   }
 
   List<MeetingRecordEntity> get recentMeetingRecords {
@@ -164,6 +159,10 @@ class CalendarController extends GetxController {
     focusedDay.value = date;
   }
 
+  void toggleMonthCalendar() {
+    isMonthCalendarExpanded.value = !isMonthCalendarExpanded.value;
+  }
+
   @override
   void onInit() async {
     super.onInit();
@@ -187,11 +186,6 @@ class CalendarController extends GetxController {
       _events.assignAll(result);
       await _syncMeetingStatuses(result);
       await _syncMeetingRecords(result);
-
-      calendarEventController.removeWhere((event) => true);
-      calendarEventController.addAll(
-        CalendarEventMapper.toCalendarViewEvents(result),
-      );
       await _notificationService.resyncCalendarNotifications(
         result,
         completedRecordEventIds: _completedRecordEventIds,
@@ -206,16 +200,10 @@ class CalendarController extends GetxController {
     Get.toNamed(AppRoutes.calendarEventDetail, arguments: {'event': event});
   }
 
-  void goToEventScreen({
-    List<CalendarEventData<CalendarEvent>>? events,
-    required DateTime date,
-  }) {
-    final selectedEvent =
-        events != null && events.isNotEmpty ? events.first.event : null;
-
+  void goToEventScreen({required DateTime date, CalendarEvent? event}) {
     Get.toNamed(
       CalendarEventScreen.name,
-      arguments: {'event': selectedEvent, 'date': date},
+      arguments: {'event': event, 'date': date},
     );
   }
 
@@ -230,7 +218,6 @@ class CalendarController extends GetxController {
   @override
   void onClose() {
     _authSessionWorker?.dispose();
-    calendarEventController.dispose();
     super.onClose();
   }
 
@@ -246,11 +233,6 @@ class CalendarController extends GetxController {
         _events.assignAll(result);
         await _syncMeetingStatuses(result);
         await _syncMeetingRecords(result);
-
-        calendarEventController.removeWhere((event) => true);
-        calendarEventController.addAll(
-          CalendarEventMapper.toCalendarViewEvents(result),
-        );
         await _notificationService.resyncCalendarNotifications(
           result,
           completedRecordEventIds: _completedRecordEventIds,
