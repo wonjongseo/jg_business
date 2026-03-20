@@ -18,6 +18,10 @@ abstract final class MeetingRecordFirestoreMapper {
       'scheduledStartAt': _toTimestamp(record.scheduledStartAt),
       'scheduledEndAt': _toTimestamp(record.scheduledEndAt),
       'locationName': record.locationName,
+      'locationGeo': {
+        'latitude': record.locationLatitude,
+        'longitude': record.locationLongitude,
+      },
       'summary': record.summary,
       'notes': record.notes,
       'nextAction': record.nextAction,
@@ -63,6 +67,9 @@ abstract final class MeetingRecordFirestoreMapper {
     final sheets = Map<String, dynamic>.from(
       sync['sheets'] as Map? ?? const {},
     );
+    final locationGeo = Map<String, dynamic>.from(
+      data['locationGeo'] as Map? ?? const {},
+    );
 
     return MeetingRecordEntity(
       id: doc.id,
@@ -76,6 +83,8 @@ abstract final class MeetingRecordFirestoreMapper {
       scheduledStartAt: _fromTimestamp(data['scheduledStartAt']),
       scheduledEndAt: _fromTimestamp(data['scheduledEndAt']),
       locationName: data['locationName'] as String?,
+      locationLatitude: (locationGeo['latitude'] as num?)?.toDouble(),
+      locationLongitude: (locationGeo['longitude'] as num?)?.toDouble(),
       summary: data['summary'] as String? ?? '',
       notes: data['notes'] as String?,
       nextAction: data['nextAction'] as String?,

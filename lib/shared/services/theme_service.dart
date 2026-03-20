@@ -9,12 +9,14 @@ class ThemeService extends GetxService {
 
   bool get isDarkMode => _isDarkMode.value;
 
+  /// 앱 시작 시 저장된 다크모드 상태를 읽어 메모리에 올린다.
   Future<ThemeService> init() async {
     final preferences = await SharedPreferences.getInstance();
     _isDarkMode.value = preferences.getBool(_themeModeKey) ?? false;
     return this;
   }
 
+  /// 다크모드 값을 저장하고 현재 메모리 상태도 함께 바꾼다.
   Future<void> setDarkMode(bool value) async {
     final preferences = await SharedPreferences.getInstance();
     _isDarkMode.value = value;

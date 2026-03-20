@@ -6,7 +6,7 @@ import 'package:jg_business/features/business_card/data/models/business_card_ent
 import 'package:jg_business/features/business_card/data/repositories/business_card_repository.dart';
 import 'package:jg_business/features/client/data/repositories/client_repository.dart';
 import 'package:jg_business/features/client/presentation/controllers/client_controller.dart';
-import 'package:jg_business/shared/utils/app_feedback.dart';
+import 'package:jg_business/shared/utils/snackbar_helper.dart';
 
 class BusinessCardController extends GetxController {
   BusinessCardController({
@@ -47,7 +47,7 @@ class BusinessCardController extends GetxController {
   Future<void> save() async {
     final companyName = companyNameCtrl.text.trim();
     if (companyName.isEmpty) {
-      AppFeedback.error(
+      SnackbarHelper.error(
         '保存不可',
         '会社名を入力してください。',
       );
@@ -92,7 +92,7 @@ class BusinessCardController extends GetxController {
         await Get.find<ClientController>().fetchClients();
       }
 
-      AppFeedback.success(
+      SnackbarHelper.success(
         '保存完了',
         '名刺情報を顧客に登録しました。',
       );

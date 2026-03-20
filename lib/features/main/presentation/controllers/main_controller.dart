@@ -9,10 +9,12 @@ import 'package:jg_business/features/calendar/presentation/screens/calendar_scre
 import 'package:jg_business/features/client/presentation/controllers/client_controller.dart';
 import 'package:jg_business/features/client/presentation/screens/client_screen.dart';
 import 'package:jg_business/shared/layout/app_responsive.dart';
+import 'package:jg_business/shared/models/location_permission_info.dart';
+import 'package:jg_business/shared/services/location_permission_service.dart';
 import 'package:jg_business/shared/services/notification_service.dart';
 import 'package:jg_business/shared/services/theme_service.dart';
 import 'package:jg_business/shared/theme/app_tokens.dart';
-import 'package:jg_business/shared/utils/app_feedback.dart';
+import 'package:jg_business/shared/utils/snackbar_helper.dart';
 import 'package:jg_business/shared/widgets/app_panel.dart';
 import 'package:jg_business/shared/widgets/google_sign_in_web_button.dart';
 
@@ -21,15 +23,18 @@ class MainController extends GetxController {
     required AuthController authController,
     required CalendarController calendarController,
     required NotificationService notificationService,
+    required LocationPermissionService locationPermissionService,
     required ThemeService themeService,
   }) : _authController = authController,
        _calendarController = calendarController,
        _notificationService = notificationService,
+       _locationPermissionService = locationPermissionService,
        _themeService = themeService;
 
   final AuthController _authController;
   final CalendarController _calendarController;
   final NotificationService _notificationService;
+  final LocationPermissionService _locationPermissionService;
   final ThemeService _themeService;
 
   late final bodies = <Widget>[
@@ -77,18 +82,30 @@ class MainController extends GetxController {
   final _areNotificationsAllowed = false.obs;
   final _pendingReminderCount = 0.obs;
   final _isRefreshingNotificationStatus = false.obs;
+  // 위치 권한 카드는 알림 카드와 별개로 독립 상태를 가진다.
+  final _locationPermissionInfo = const LocationPermissionInfo(
+    serviceEnabled: false,
+    permission: 'unknown',
+  ).obs;
+  final _isRefreshingLocationPermission = false.obs;
 
   int get selectedIndex => _selectedIndex.value;
   bool get isSigningOut => _isSigningOut.value;
   bool get areNotificationsAllowed => _areNotificationsAllowed.value;
   int get pendingReminderCount => _pendingReminderCount.value;
   bool get isRefreshingNotificationStatus => _isRefreshingNotificationStatus.value;
+  bool get isRefreshingLocationPermission => _isRefreshingLocationPermission.value;
+  bool get showLocationSettings => !kIsWeb;
   bool get isDarkMode => _themeService.isDarkMode;
+  LocationPermissionInfo get locationPermissionInfo =>
+      _locationPermissionInfo.value;
 
   @override
   void onInit() {
     super.onInit();
     refreshNotificationStatus();
+    // その他 탭에 들어가기 전에도 현재 상태를 미리 읽어둔다.
+    refreshLocationPermissionStatus();
   }
 
   void onDestinationSelected(int value) {
@@ -96,6 +113,8 @@ class MainController extends GetxController {
 
     if (value == 4) {
       refreshNotificationStatus();
+      // 설정 탭 진입 시 위치 권한 상태도 같이 새로 읽는다.
+      refreshLocationPermissionStatus();
     }
     if (value == 2 && Get.isRegistered<ClientController>()) {
       Get.find<ClientController>().fetchClients();
@@ -124,6 +143,42 @@ class MainController extends GetxController {
     await refreshNotificationStatus();
   }
 
+  Future<void> refreshLocationPermissionStatus() async {
+    if (kIsWeb) return;
+
+    try {
+      _isRefreshingLocationPermission.value = true;
+      _locationPermissionInfo.value =
+          await _locationPermissionService.getStatus();
+    } finally {
+      _isRefreshingLocationPermission.value = false;
+    }
+  }
+
+  Future<void> requestLocationPermission() async {
+    if (kIsWeb) return;
+    // 우선 사용 중 권한부터 받아서 기본 위치 기능을 켠다.
+    _locationPermissionInfo.value =
+        await _locationPermissionService.requestWhenInUsePermission();
+  }
+
+  Future<void> requestAlwaysLocationPermission() async {
+    if (kIsWeb) return;
+    // 백그라운드 이탈 알림을 위해 항상 허용 권한을 요청한다.
+    _locationPermissionInfo.value =
+        await _locationPermissionService.requestAlwaysPermission();
+  }
+
+  Future<void> openLocationSettings() async {
+    if (kIsWeb) return;
+    await _locationPermissionService.openLocationSettings();
+  }
+
+  Future<void> openAppSettings() async {
+    if (kIsWeb) return;
+    await _locationPermissionService.openAppSettings();
+  }
+
   Future<void> signOutGoogle() async {
     if (_isSigningOut.value) return;
 
@@ -132,12 +187,12 @@ class MainController extends GetxController {
       await _authController.signOut();
       await _calendarController.fetchCalendar(interactive: false);
       await refreshNotificationStatus();
-      AppFeedback.success(
+      SnackbarHelper.success(
         'ログアウト完了',
         'Google アカウントからサインアウトしました。',
       );
     } catch (_) {
-      AppFeedback.error(
+      SnackbarHelper.error(
         'ログアウト失敗',
         'Google アカウントのサインアウトに失敗しました。',
       );
@@ -239,6 +294,80 @@ class _MoreScreen extends GetView<MainController> {
                       ),
                     ),
                     const SizedBox(height: 24),
+                    if (controller.showLocationSettings) ...[
+                      Obx(
+                        () => AppPanel(
+                          padding: const EdgeInsets.all(16),
+                          borderRadius: 20,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '位置権限',
+                                style: theme.textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 6),
+                              // 현재 서비스 활성화 여부와 권한 수준을 한 줄로 요약한다.
+                              Text(
+                                controller.isRefreshingLocationPermission
+                                    ? '位置権限状態を確認しています...'
+                                    : _buildLocationPermissionDescription(
+                                      controller.locationPermissionInfo,
+                                    ),
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: AppColors.muted,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: [
+                                  FilledButton.tonalIcon(
+                                    onPressed:
+                                        controller.requestLocationPermission,
+                                    icon: const Icon(
+                                      Icons.my_location_outlined,
+                                    ),
+                                    label: const Text('位置権限を許可'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed:
+                                        controller
+                                                .locationPermissionInfo
+                                                .isGranted
+                                            ? controller
+                                                .requestAlwaysLocationPermission
+                                            : null,
+                                    icon: const Icon(
+                                      Icons.location_searching_outlined,
+                                    ),
+                                    label: const Text('常時権限を確認'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: controller.openLocationSettings,
+                                    icon: const Icon(Icons.gps_fixed_outlined),
+                                    label: const Text('位置情報を開く'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: controller.openAppSettings,
+                                    icon: const Icon(Icons.settings_outlined),
+                                    label: const Text('アプリ設定を開く'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed:
+                                        controller.refreshLocationPermissionStatus,
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('状態を更新'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                     Obx(
                       () => AppPanel(
                         padding: const EdgeInsets.all(16),
@@ -388,4 +517,19 @@ class _MoreScreen extends GetView<MainController> {
       ),
     );
   }
+}
+
+String _buildLocationPermissionDescription(LocationPermissionInfo info) {
+  // 상태 문구는 사용자가 "무엇이 꺼져 있어서 안 되는지" 바로 알 수 있게 만든다.
+  final serviceText = info.serviceEnabled ? 'ON' : 'OFF';
+  final permissionText = switch (info.permission) {
+    'always' => '常時許可',
+    'whileInUse' => '使用中のみ許可',
+    'denied' => '未許可',
+    'deniedForever' => '設定で許可が必要',
+    'unsupported' => '未対応',
+    _ => '未確認',
+  };
+
+  return '位置サービス: $serviceText / 権限: $permissionText';
 }

@@ -11,6 +11,8 @@ class MeetingRecordEntity {
     required this.scheduledStartAt,
     required this.scheduledEndAt,
     required this.locationName,
+    required this.locationLatitude,
+    required this.locationLongitude,
     required this.summary,
     required this.notes,
     required this.nextAction,
@@ -35,6 +37,8 @@ class MeetingRecordEntity {
   final DateTime? scheduledStartAt;
   final DateTime? scheduledEndAt;
   final String? locationName;
+  final double? locationLatitude;
+  final double? locationLongitude;
   final String summary;
   final String? notes;
   final String? nextAction;
@@ -60,6 +64,8 @@ class MeetingRecordEntity {
     DateTime? scheduledStartAt,
     DateTime? scheduledEndAt,
     String? locationName,
+    double? locationLatitude,
+    double? locationLongitude,
     String? summary,
     String? notes,
     String? nextAction,
@@ -86,6 +92,8 @@ class MeetingRecordEntity {
       scheduledStartAt: scheduledStartAt ?? this.scheduledStartAt,
       scheduledEndAt: scheduledEndAt ?? this.scheduledEndAt,
       locationName: locationName ?? this.locationName,
+      locationLatitude: locationLatitude ?? this.locationLatitude,
+      locationLongitude: locationLongitude ?? this.locationLongitude,
       summary: summary ?? this.summary,
       notes: notes ?? this.notes,
       nextAction: nextAction ?? this.nextAction,

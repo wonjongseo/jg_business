@@ -53,6 +53,7 @@ class NotificationService {
   String _secondAfterMeetingPayload(String eventId) =>
       '$_afterMeetingSecondPayloadPrefix$eventId';
 
+  /// flutter_local_notifications 플러그인을 플랫폼별 옵션으로 초기화한다.
   Future<void> initialize() async {
     /// 알림 플러그인을 1회만 초기화한다.
 
@@ -73,6 +74,7 @@ class NotificationService {
     _isInitialized = true;
   }
 
+  /// 플랫폼별 알림 권한 요청을 수행한다.
   Future<void> requestPermissions() async {
     /// 플랫폼별 알림 권한 요청을 수행한다.
     await initialize();
@@ -90,6 +92,7 @@ class NotificationService {
         ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
+  /// 현재 플랫폼에서 알림이 실제로 표시 가능한 상태인지 확인한다.
   Future<bool> areNotificationsAllowed() async {
     /// 현재 디바이스에서 알림 권한이 유효한지 확인한다.
     await initialize();
@@ -117,6 +120,7 @@ class NotificationService {
     return true;
   }
 
+  /// 현재 예약된 캘린더 리마인더 개수를 설정 화면에 보여줄 때 사용한다.
   Future<int> pendingCalendarReminderCount() async {
     /// 캘린더 이벤트용으로 예약된 알림 개수를 센다.
     await initialize();
@@ -130,6 +134,7 @@ class NotificationService {
     }).length;
   }
 
+  /// 미팅 시작 전 리마인더를 단일 일정에 대해 예약한다.
   Future<void> scheduleBeforeMeetingReminder(CalendarEvent event) async {
     /// 단일 일정에 대한 사전 알림을 예약한다.
     if (Platform.isMacOS) return;
@@ -165,6 +170,7 @@ class NotificationService {
     );
   }
 
+  /// 미팅 종료 후 기록 리마인더를 여러 시점에 예약한다.
   Future<void> scheduleAfterMeetingReminder(CalendarEvent event) async {
     /// 미팅 종료 후 기록 작성을 유도하는 알림들을 예약한다.
 
@@ -218,6 +224,7 @@ class NotificationService {
     }
   }
 
+  /// 특정 eventId와 연결된 before/after 알림을 모두 제거한다.
   Future<void> cancelForEvent(String eventId) async {
     await initialize();
     await _plugin.cancel(beforeMeetingNotificationId(eventId));
@@ -225,6 +232,7 @@ class NotificationService {
     await _plugin.cancel(secondAfterMeetingNotificationId(eventId));
   }
 
+  /// 현재 일정 목록을 기준으로 캘린더 알림만 선별적으로 재등록한다.
   Future<void> resyncCalendarNotifications(
     List<CalendarEvent> events, {
     Set<String> completedRecordEventIds = const {},

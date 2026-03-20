@@ -8,6 +8,8 @@ class MeetingStatusEntity {
     required this.scheduledStartAt,
     required this.scheduledEndAt,
     required this.locationName,
+    required this.locationLatitude,
+    required this.locationLongitude,
     required this.recordStatus,
     required this.beforeMeetingReminderStatus,
     required this.afterMeetingReminderStatus,
@@ -26,6 +28,8 @@ class MeetingStatusEntity {
   final DateTime? scheduledStartAt;
   final DateTime? scheduledEndAt;
   final String? locationName;
+  final double? locationLatitude;
+  final double? locationLongitude;
   final String recordStatus;
   final String beforeMeetingReminderStatus;
   final String afterMeetingReminderStatus;

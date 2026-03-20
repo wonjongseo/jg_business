@@ -22,6 +22,10 @@ class MeetingStatusFirestoreDataSource {
       'scheduledStartAt': _toTimestamp(status.scheduledStartAt),
       'scheduledEndAt': _toTimestamp(status.scheduledEndAt),
       'locationName': status.locationName,
+      'locationGeo': {
+        'latitude': status.locationLatitude,
+        'longitude': status.locationLongitude,
+      },
       'recordStatus': status.recordStatus,
       'reminderStatus': {
         'beforeMeeting': status.beforeMeetingReminderStatus,
@@ -77,6 +81,9 @@ class MeetingStatusFirestoreDataSource {
     final reminderStatus = Map<String, dynamic>.from(
       data['reminderStatus'] as Map? ?? const {},
     );
+    final locationGeo = Map<String, dynamic>.from(
+      data['locationGeo'] as Map? ?? const {},
+    );
 
     return MeetingStatusEntity(
       id: doc.id,
@@ -86,6 +93,8 @@ class MeetingStatusFirestoreDataSource {
       scheduledStartAt: _fromTimestamp(data['scheduledStartAt']),
       scheduledEndAt: _fromTimestamp(data['scheduledEndAt']),
       locationName: data['locationName'] as String?,
+      locationLatitude: (locationGeo['latitude'] as num?)?.toDouble(),
+      locationLongitude: (locationGeo['longitude'] as num?)?.toDouble(),
       recordStatus: data['recordStatus'] as String? ?? 'idle',
       beforeMeetingReminderStatus:
           reminderStatus['beforeMeeting'] as String? ?? 'idle',

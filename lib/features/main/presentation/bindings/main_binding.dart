@@ -7,6 +7,7 @@ import 'package:jg_business/features/client/presentation/controllers/client_cont
 import 'package:jg_business/features/client/data/repositories/client_repository.dart';
 import 'package:jg_business/features/meeting/data/repositories/meeting_record_repository.dart';
 import 'package:jg_business/features/main/presentation/controllers/main_controller.dart';
+import 'package:jg_business/shared/services/location_permission_service.dart';
 import 'package:jg_business/shared/services/notification_service.dart';
 import 'package:jg_business/shared/services/theme_service.dart';
 
@@ -14,6 +15,8 @@ class MainBinding extends Bindings {
   @override
   void dependencies() {
     CalendarBinding().dependencies();
+    // 위치 권한 서비스는 설정 화면과 이후 위치 알림 구현에서 공용으로 쓴다.
+    Get.put(LocationPermissionService(), permanent: true);
     Get.put(
       ClientController(
         repository: Get.find<ClientRepository>(),
@@ -27,6 +30,7 @@ class MainBinding extends Bindings {
         authController: Get.find<AuthController>(),
         calendarController: Get.find<CalendarController>(),
         notificationService: Get.find<NotificationService>(),
+        locationPermissionService: Get.find<LocationPermissionService>(),
         themeService: Get.find<ThemeService>(),
       ),
       permanent: true,

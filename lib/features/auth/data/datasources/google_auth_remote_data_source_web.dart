@@ -42,6 +42,7 @@ class GoogleAuthRemoteDataSource {
     return '営業担当者';
   }
 
+  /// 웹에서는 GIS 초기화를 한 번만 수행한다.
   Future<void> initialize() async {
     if (_isInitialized) return;
     if (_initializing != null) {
@@ -57,6 +58,7 @@ class GoogleAuthRemoteDataSource {
     }
   }
 
+  /// clientId 기반 GIS 초기화 후 기존 세션 복구를 시도한다.
   Future<void> _initializeInternal() async {
     await _signIn.initialize(clientId: AppEnv.googleWebClientId);
 
@@ -78,6 +80,7 @@ class GoogleAuthRemoteDataSource {
     _isInitialized = true;
   }
 
+  /// 웹에서는 현재 세션에 대해 필요한 scope 승격을 거쳐 헤더를 만든다.
   Future<Map<String, String>?> getAuthorizationHeaders({
     List<String> scopes = defaultScopes,
     bool interactive = true,
@@ -97,6 +100,7 @@ class GoogleAuthRemoteDataSource {
     );
   }
 
+  /// 웹 로그아웃은 GIS 연결을 끊고 메모리 세션을 비운다.
   Future<void> signOut() async {
     await initialize();
     await _signIn.disconnect();
@@ -104,6 +108,7 @@ class GoogleAuthRemoteDataSource {
     _authStateController.add(null);
   }
 
+  /// 웹은 GIS 버튼 로그인 후 추가 scope만 다시 요청한다.
   Future<void> reauthenticate({List<String> scopes = defaultScopes}) async {
     await initialize();
     final user = _currentUser;

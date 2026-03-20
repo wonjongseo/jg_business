@@ -152,7 +152,11 @@ class _CalendarEventCard extends StatelessWidget {
     final isOngoing = Get.find<CalendarController>().isOngoing(event);
     final currentUserEmail =
         Get.find<AuthController>().currentUserEmail?.trim().toLowerCase();
-
+    final meta = _buildMetaLine(
+      event,
+      attendeeCount,
+      currentUserEmail: currentUserEmail,
+    );
     return HomePanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,10 +175,13 @@ class _CalendarEventCard extends StatelessWidget {
           const SizedBox(height: 14),
           Text(event.summary ?? 'タイトル未設定', style: theme.textTheme.titleLarge),
           const SizedBox(height: 8),
-          Text(
-            _buildMetaLine(event, attendeeCount, currentUserEmail: currentUserEmail),
-            style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.muted),
-          ),
+          if (meta.isNotEmpty)
+            Text(
+              meta,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppColors.muted,
+              ),
+            ),
           const SizedBox(height: 16),
           Wrap(
             spacing: 10,
@@ -221,6 +228,6 @@ String _buildMetaLine(
       if (normalizedOrganizerEmail != currentUserEmail) organizerEmail!,
     if (attendeeCount > 0) '参加者 $attendeeCount 名',
   ];
-  if (parts.isEmpty) return 'Google Calendar から取得した予定です。';
+  if (parts.isEmpty) return '';
   return parts.join(' ・ ');
 }

@@ -3,14 +3,26 @@ import 'package:jg_business/features/calendar/data/models/calendar_events_respon
 import 'package:jg_business/features/meeting/data/datasources/meeting_status_firestore_data_source.dart';
 import 'package:jg_business/features/meeting/data/models/meeting_status_entity.dart';
 import 'package:jg_business/shared/constants/reminder_constants.dart';
+import 'package:jg_business/shared/models/location_coordinate.dart';
+import 'package:jg_business/shared/services/location_resolver_service.dart';
 
 class MeetingStatusRepository {
   MeetingStatusRepository({
     required MeetingStatusFirestoreDataSource firestoreDataSource,
-  }) : _firestoreDataSource = firestoreDataSource;
+    required LocationResolverService locationResolverService,
+  }) : _firestoreDataSource = firestoreDataSource,
+       _locationResolverService = locationResolverService;
 
   final MeetingStatusFirestoreDataSource _firestoreDataSource;
+  final LocationResolverService _locationResolverService;
 
+  /// 현재 캘린더 이벤트 목록을 기준으로 `meeting_status` 문서를 동기화한다.
+  ///
+  /// 처리 순서:
+  /// 1. 기존 Firestore 상태 문서를 eventId 기준으로 찾는다.
+  /// 2. 장소 문자열이 있으면 좌표를 해석하거나 기존 좌표를 재사용한다.
+  /// 3. 기록 상태와 시간 기반 리마인더 상태를 현재 시각 기준으로 계산한다.
+  /// 4. 달라진 값이 있으면 Firestore에 upsert 한다.
   Future<List<MeetingStatusEntity>> syncStatusesForEvents({
     required String userId,
     required List<CalendarEvent> events,
@@ -35,7 +47,13 @@ class MeetingStatusRepository {
         continue;
       }
 
+      // 이미 저장된 상태 문서가 있으면 좌표/상태 보정의 기준으로 사용한다.
       final existingStatus = byEventId[eventId];
+      final coordinate = await _resolveCoordinate(
+        locationName: event.location,
+        existingStatus: existingStatus,
+      );
+      // 일정이 이미 끝났다면 기본 상태는 기록 대기(pending)다.
       final defaultRecordStatus = _defaultRecordStatus(event);
       final normalizedRecordStatus =
           existingStatus?.recordStatus == 'completed'
@@ -44,6 +62,7 @@ class MeetingStatusRepository {
                       defaultRecordStatus == 'pending'
                   ? 'pending'
                   : existingStatus?.recordStatus ?? defaultRecordStatus;
+      // 리마인더 상태는 현재 시각을 기준으로 다시 계산한다.
       final normalizedBeforeMeetingStatus = _beforeMeetingStatus(
         event: event,
         now: now,
@@ -53,6 +72,7 @@ class MeetingStatusRepository {
         recordStatus: normalizedRecordStatus,
         now: now,
       );
+      // Firestore에 저장할 최종 상태 문서를 만든다.
       final status = existingStatus == null
           ? MeetingStatusEntity(
               id: '${userId}_$eventId',
@@ -62,6 +82,8 @@ class MeetingStatusRepository {
               scheduledStartAt: event.start?.dateTime ?? event.start?.date,
               scheduledEndAt: event.end?.dateTime ?? event.end?.date,
               locationName: event.location,
+              locationLatitude: coordinate?.latitude,
+              locationLongitude: coordinate?.longitude,
               recordStatus: normalizedRecordStatus,
               beforeMeetingReminderStatus: normalizedBeforeMeetingStatus,
               afterMeetingReminderStatus: normalizedAfterMeetingStatus,
@@ -80,6 +102,8 @@ class MeetingStatusRepository {
               scheduledStartAt: event.start?.dateTime ?? event.start?.date,
               scheduledEndAt: event.end?.dateTime ?? event.end?.date,
               locationName: event.location,
+              locationLatitude: coordinate?.latitude,
+              locationLongitude: coordinate?.longitude,
               recordStatus: normalizedRecordStatus,
               beforeMeetingReminderStatus: normalizedBeforeMeetingStatus,
               afterMeetingReminderStatus: normalizedAfterMeetingStatus,
@@ -94,6 +118,7 @@ class MeetingStatusRepository {
 
       merged.add(status);
 
+      // 의미 있는 값이 바뀌었을 때만 Firestore에 다시 저장한다.
       if (existingStatus == null ||
           status.recordStatus != existingStatus.recordStatus ||
           status.beforeMeetingReminderStatus !=
@@ -102,7 +127,9 @@ class MeetingStatusRepository {
               existingStatus.afterMeetingReminderStatus ||
           status.scheduledStartAt != existingStatus.scheduledStartAt ||
           status.scheduledEndAt != existingStatus.scheduledEndAt ||
-          status.locationName != existingStatus.locationName) {
+          status.locationName != existingStatus.locationName ||
+          status.locationLatitude != existingStatus.locationLatitude ||
+          status.locationLongitude != existingStatus.locationLongitude) {
         await _firestoreDataSource.upsertMeetingStatus(status);
       }
     }
@@ -114,10 +141,12 @@ class MeetingStatusRepository {
     required String userId,
     required CalendarEvent event,
   }) async {
-    /// 미팅 기록 저장 후 recordStatus를 completed로 올린다.
+    /// 미팅 기록 저장 후 `meeting_status`도 completed 상태로 맞춘다.
+    /// 이 시점에도 위치 좌표를 같이 남겨 이후 geofence 등록에 재사용한다.
     final eventId = event.id;
     if (eventId == null || eventId.isEmpty) return;
 
+    final coordinate = await _resolveCoordinate(locationName: event.location);
     await _firestoreDataSource.upsertMeetingStatus(
       MeetingStatusEntity(
         id: '${userId}_$eventId',
@@ -127,6 +156,8 @@ class MeetingStatusRepository {
         scheduledStartAt: event.start?.dateTime ?? event.start?.date,
         scheduledEndAt: event.end?.dateTime ?? event.end?.date,
         locationName: event.location,
+        locationLatitude: coordinate?.latitude,
+        locationLongitude: coordinate?.longitude,
         recordStatus: 'completed',
         beforeMeetingReminderStatus: 'done',
         afterMeetingReminderStatus: 'done',
@@ -144,10 +175,13 @@ class MeetingStatusRepository {
     required String userId,
     required CalendarEvent event,
   }) async {
+    /// 기록만 삭제했을 때는 일정을 지우는 것이 아니라
+    /// 현재 시각 기준으로 pending/idle 상태로 되돌린다.
     final eventId = event.id;
     if (eventId == null || eventId.isEmpty) return;
 
     final recordStatus = _defaultRecordStatus(event);
+    final coordinate = await _resolveCoordinate(locationName: event.location);
     await _firestoreDataSource.upsertMeetingStatus(
       MeetingStatusEntity(
         id: '${userId}_$eventId',
@@ -157,6 +191,8 @@ class MeetingStatusRepository {
         scheduledStartAt: event.start?.dateTime ?? event.start?.date,
         scheduledEndAt: event.end?.dateTime ?? event.end?.date,
         locationName: event.location,
+        locationLatitude: coordinate?.latitude,
+        locationLongitude: coordinate?.longitude,
         recordStatus: recordStatus,
         beforeMeetingReminderStatus: _beforeMeetingStatus(
           event: event,
@@ -178,6 +214,7 @@ class MeetingStatusRepository {
   }
 
   String _defaultRecordStatus(CalendarEvent event) {
+    /// 종료한 일정이면 기록 대기, 아직 안 끝났으면 idle 상태다.
     final end = event.end?.dateTime ?? event.end?.date;
     if (end != null && end.isBefore(DateTime.now())) {
       return 'pending';
@@ -189,6 +226,7 @@ class MeetingStatusRepository {
     required CalendarEvent event,
     required DateTime now,
   }) {
+    /// 종일 일정은 시간 기반 미팅 리마인더 대상에서 제외한다.
     final start = event.start?.dateTime;
     if (start == null || (event.start?.isAllDay ?? false)) {
       return 'idle';
@@ -205,6 +243,7 @@ class MeetingStatusRepository {
     required String recordStatus,
     required DateTime now,
   }) {
+    /// 기록이 완료된 일정은 사후 리마인더를 더 이상 보낼 필요가 없다.
     final end = event.end?.dateTime;
     if (end == null || (event.end?.isAllDay ?? false)) {
       return 'idle';
@@ -219,5 +258,30 @@ class MeetingStatusRepository {
       ),
     );
     return reminderAt.isAfter(now) ? 'scheduled' : 'due';
+  }
+
+  Future<LocationCoordinate?> _resolveCoordinate({
+    required String? locationName,
+    MeetingStatusEntity? existingStatus,
+  }) async {
+    /// 위치 문자열이 없으면 geofence 기준 좌표도 만들 수 없다.
+    final normalized = locationName?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      return null;
+    }
+
+    // 같은 주소로 저장된 기존 좌표가 있으면 geocoding을 다시 하지 않는다.
+    if (existingStatus != null &&
+        existingStatus.locationName?.trim() == normalized &&
+        existingStatus.locationLatitude != null &&
+        existingStatus.locationLongitude != null) {
+      return LocationCoordinate(
+        latitude: existingStatus.locationLatitude!,
+        longitude: existingStatus.locationLongitude!,
+      );
+    }
+
+    // 기존 좌표가 없을 때만 실제 주소 -> 좌표 해석을 시도한다.
+    return _locationResolverService.resolve(normalized);
   }
 }

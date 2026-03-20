@@ -37,7 +37,6 @@ class GoogleCalendarRemoteDataSource {
           'orderBy': 'startTime',
           'timeMin': timeMin.toUtc().toIso8601String(),
           'timeMax': timeMax.toUtc().toIso8601String(),
-          // 'maxResults': 12,
         },
       );
 

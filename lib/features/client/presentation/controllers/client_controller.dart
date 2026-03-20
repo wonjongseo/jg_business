@@ -6,7 +6,7 @@ import 'package:jg_business/features/client/data/models/client_entity.dart';
 import 'package:jg_business/features/client/data/repositories/client_repository.dart';
 import 'package:jg_business/features/meeting/data/models/meeting_record_entity.dart';
 import 'package:jg_business/features/meeting/data/repositories/meeting_record_repository.dart';
-import 'package:jg_business/shared/utils/app_feedback.dart';
+import 'package:jg_business/shared/utils/snackbar_helper.dart';
 
 class ClientController extends GetxController {
   ClientController({
@@ -127,9 +127,9 @@ class ClientController extends GetxController {
       await fetchClients();
       _selectedClientId.value = client.id;
       await _loadSelectedClientRecords();
-      AppFeedback.success('保存完了', '顧客情報を更新しました。');
+      SnackbarHelper.success('保存完了', '顧客情報を更新しました。');
     } catch (_) {
-      AppFeedback.error('保存失敗', '顧客情報の更新に失敗しました。');
+      SnackbarHelper.error('保存失敗', '顧客情報の更新に失敗しました。');
     } finally {
       _isSaving.value = false;
     }

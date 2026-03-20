@@ -14,6 +14,7 @@ import 'package:jg_business/features/meeting/data/repositories/meeting_record_re
 import 'package:jg_business/features/meeting/data/repositories/meeting_status_repository.dart';
 import 'package:jg_business/features/spreadsheet_sync/data/datasources/google_sheets_remote_data_source.dart';
 import 'package:jg_business/features/spreadsheet_sync/data/repositories/spreadsheet_sync_repository.dart';
+import 'package:jg_business/shared/services/location_resolver_service.dart';
 import 'package:jg_business/shared/services/notification_service.dart';
 
 class CalendarBinding extends Bindings {
@@ -36,6 +37,10 @@ class CalendarBinding extends Bindings {
       fenix: true,
     );
     Get.lazyPut<NotificationService>(() => NotificationService(), fenix: true);
+    Get.lazyPut<LocationResolverService>(
+      () => LocationResolverService(),
+      fenix: true,
+    );
     Get.lazyPut<ClientFirestoreDataSource>(
       () => ClientFirestoreDataSource(),
       fenix: true,
@@ -73,6 +78,7 @@ class CalendarBinding extends Bindings {
     Get.lazyPut<MeetingStatusRepository>(
       () => MeetingStatusRepository(
         firestoreDataSource: Get.find<MeetingStatusFirestoreDataSource>(),
+        locationResolverService: Get.find<LocationResolverService>(),
       ),
       fenix: true,
     );

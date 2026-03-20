@@ -21,13 +21,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('ja_JP');
   await _initTimezone();
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } on UnsupportedError {
-    // Firebase config is not generated for every desktop target yet.
-  }
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await Get.putAsync(() => ThemeService().init(), permanent: true);
 
   runApp(const JgBusinessApp());
@@ -62,3 +56,11 @@ class JgBusinessApp extends StatelessWidget {
 
 // flutter run -d chrome --web-port 3000
 //flutter run -d chrome \  --dart-define=GOOGLE_WEB_CLIENT_ID=820390242930-k2ciki8i7divtsebcrisl172fer62t0o.apps.googleusercontent.com
+
+
+/**
+ 주소 -> 좌표 저장 구조 추가
+위치 권한/설정 화면 추가
+이탈 300m 후 기록 알림부터 먼저
+그 다음 도착 전 알림
+ */

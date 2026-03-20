@@ -37,6 +37,10 @@ Primary collection for step 1 of the Firebase migration.
   "scheduledStartAt": "timestamp",
   "scheduledEndAt": "timestamp",
   "locationName": "Tokyo HQ",
+  "locationGeo": {
+    "latitude": 35.681236,
+    "longitude": 139.767125
+  },
   "summary": "meeting summary",
   "notes": "raw note body",
   "nextAction": "send pricing sheet",
@@ -74,6 +78,10 @@ Google Calendar event without copying the full event payload.
   "scheduledStartAt": "timestamp",
   "scheduledEndAt": "timestamp",
   "locationName": "Tokyo HQ",
+  "locationGeo": {
+    "latitude": 35.681236,
+    "longitude": 139.767125
+  },
   "recordStatus": "pending",
   "reminderStatus": {
     "beforeMeeting": "scheduled",

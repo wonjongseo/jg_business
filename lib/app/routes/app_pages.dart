@@ -22,6 +22,7 @@ import 'package:jg_business/features/onboarding/presentation/screens/onboarding_
 import 'package:jg_business/features/spreadsheet_sync/data/repositories/spreadsheet_sync_repository.dart';
 import 'package:jg_business/features/splash/presentation/bindings/splash_binding.dart';
 import 'package:jg_business/features/splash/presentation/screens/splash_screen.dart';
+import 'package:jg_business/shared/services/location_resolver_service.dart';
 
 abstract final class AppPages {
   static final pages = <GetPage<dynamic>>[
@@ -69,6 +70,7 @@ abstract final class AppPages {
           meetingStatusRepository: Get.find<MeetingStatusRepository>(),
           clientRepository: Get.find<ClientRepository>(),
           spreadsheetSyncRepository: Get.find<SpreadsheetSyncRepository>(),
+          locationResolverService: Get.find<LocationResolverService>(),
           authController: Get.find<AuthController>(),
           event: event,
         );
