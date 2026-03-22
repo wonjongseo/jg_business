@@ -1,5 +1,6 @@
 /// 캘린더 탭과 홈 대시보드에서 공용으로 쓰는 일정 상태 컨트롤러다.
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:jg_business/app/routes/app_routes.dart';
@@ -11,6 +12,7 @@ import 'package:jg_business/features/meeting/data/models/meeting_record_entity.d
 import 'package:jg_business/features/meeting/data/models/meeting_status_entity.dart';
 import 'package:jg_business/features/meeting/data/repositories/meeting_record_repository.dart';
 import 'package:jg_business/features/meeting/data/repositories/meeting_status_repository.dart';
+import 'package:jg_business/shared/services/geofence_registration_service.dart';
 import 'package:jg_business/shared/services/notification_service.dart';
 
 class CalendarController extends GetxController {
@@ -20,17 +22,20 @@ class CalendarController extends GetxController {
     required AuthController authController,
     required MeetingRecordRepository meetingRecordRepository,
     required MeetingStatusRepository meetingStatusRepository,
+    required GeofenceRegistrationService geofenceRegistrationService,
   }) : _remoteDataSource = remoteDataSource,
        _notificationService = notificationService,
        _authController = authController,
        _meetingRecordRepository = meetingRecordRepository,
-       _meetingStatusRepository = meetingStatusRepository;
+       _meetingStatusRepository = meetingStatusRepository,
+       _geofenceRegistrationService = geofenceRegistrationService;
 
   final GoogleCalendarRemoteDataSource _remoteDataSource;
   final NotificationService _notificationService;
   final AuthController _authController;
   final MeetingRecordRepository _meetingRecordRepository;
   final MeetingStatusRepository _meetingStatusRepository;
+  final GeofenceRegistrationService _geofenceRegistrationService;
   final _isLoading = false.obs;
   bool get isLoading => _isLoading.value;
 
@@ -62,6 +67,7 @@ class CalendarController extends GetxController {
   final focusedDay = DateTime.now().obs;
   final isMonthCalendarExpanded = false.obs;
   Worker? _authSessionWorker;
+  Timer? _geofenceRefreshTimer;
 
   List<CalendarEvent> get todayEvents {
     /// 오늘 날짜와 겹치는 일정만 추려서 홈/캘린더 상단에 보여준다.
@@ -182,6 +188,7 @@ class CalendarController extends GetxController {
       _isConnected.value = _remoteDataSource.isConnected;
       await fetchCalendar(interactive: _isConnected.value);
     });
+    _startGeofenceRefreshTimer();
     await fetchCalendar(interactive: false);
   }
 
@@ -200,6 +207,7 @@ class CalendarController extends GetxController {
       _events.assignAll(result);
       await _syncMeetingStatuses(result);
       await _syncMeetingRecords(result);
+      await _syncGeofences();
       _debugPrintResolvedLocations(result);
       await _notificationService.resyncCalendarNotifications(
         result,
@@ -233,10 +241,13 @@ class CalendarController extends GetxController {
   @override
   void onClose() {
     _authSessionWorker?.dispose();
+    _geofenceRefreshTimer?.cancel();
     super.onClose();
   }
 
   Future<void> connectCalendar() async {
+    if (_isLoading.value) return;
+
     try {
       // Connection CTA should switch the UI into a loading state immediately.
       _isLoading.value = true;
@@ -248,6 +259,7 @@ class CalendarController extends GetxController {
         _events.assignAll(result);
         await _syncMeetingStatuses(result);
         await _syncMeetingRecords(result);
+        await _syncGeofences();
         _debugPrintResolvedLocations(result);
         await _notificationService.resyncCalendarNotifications(
           result,
@@ -283,6 +295,22 @@ class CalendarController extends GetxController {
 
   String get _currentUserId {
     return _authController.currentUserId;
+  }
+
+  Future<void> _syncGeofences() async {
+    await _geofenceRegistrationService.syncMeetingGeofences(
+      _meetingStatuses.values.toList(),
+    );
+  }
+
+  void _startGeofenceRefreshTimer() {
+    // leave geofence 는 "종료 + 5분"이 지난 뒤에야 등록 대상이 되므로
+    // 앱이 켜져 있는 동안 주기적으로 다시 계산해 등록 상태를 맞춘다.
+    _geofenceRefreshTimer?.cancel();
+    _geofenceRefreshTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _syncGeofences(),
+    );
   }
 
   void _debugPrintResolvedLocations(List<CalendarEvent> events) {

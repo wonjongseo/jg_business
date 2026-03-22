@@ -137,7 +137,6 @@ class NotificationService {
   /// 미팅 시작 전 리마인더를 단일 일정에 대해 예약한다.
   Future<void> scheduleBeforeMeetingReminder(CalendarEvent event) async {
     /// 단일 일정에 대한 사전 알림을 예약한다.
-    if (Platform.isMacOS) return;
     await initialize();
 
     final eventId = event.id;

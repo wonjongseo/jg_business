@@ -5,6 +5,7 @@ import UserNotifications
 /// iOS CoreLocation geofence 등록/해제와 진입/이탈 이벤트를 관리한다.
 final class LocationGeofenceManager: NSObject, CLLocationManagerDelegate {
     static let shared = LocationGeofenceManager()
+    private static let leaveRegionMarker = "-leave-"
 
     // iOS geofence 등록과 권한 상태는 모두 CLLocationManager 를 통해 관리한다.
     private let manager = CLLocationManager()
@@ -34,7 +35,14 @@ final class LocationGeofenceManager: NSObject, CLLocationManagerDelegate {
 
     /// 현재 권한 상태를 문자열로 반환한다.
     func currentAuthorizationStatus() -> String {
-        switch manager.authorizationStatus {
+        let status: CLAuthorizationStatus
+        if #available(iOS 14.0, *) {
+            status = manager.authorizationStatus
+        } else {
+            status = CLLocationManager.authorizationStatus()
+        }
+
+        switch status {
         case .notDetermined:
             return "notDetermined"
         case .restricted:
@@ -98,6 +106,10 @@ final class LocationGeofenceManager: NSObject, CLLocationManagerDelegate {
     /// 사용자가 geofence 안으로 들어왔을 때 호출된다.
     func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
         // 현재는 테스트 단계라 Flutter 왕복 없이 네이티브에서 바로 로컬 알림을 띄운다.
+        if region.identifier.contains(Self.leaveRegionMarker) {
+            return
+        }
+
         sendLocalNotification(
             title: "まもなく面談です",
             body: "面談場所の近くに到着しました。"
@@ -108,6 +120,10 @@ final class LocationGeofenceManager: NSObject, CLLocationManagerDelegate {
     /// 사용자가 geofence 밖으로 나갔을 때 호출된다.
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
         // 이후에는 identifier 규칙에 따라 "도착 알림 / 기록 알림"을 나눌 수 있다.
+        if !region.identifier.contains(Self.leaveRegionMarker) {
+            return
+        }
+
         sendLocalNotification(
             title: "面談記録の作成",
             body: "面談場所を離れました。記録を残してください。"
@@ -121,6 +137,14 @@ final class LocationGeofenceManager: NSObject, CLLocationManagerDelegate {
         case .inside:
             print("regionState: inside / \(region.identifier)")
         case .outside:
+            // leave geofence 는 등록 시점에 이미 반경 밖에 있으면 didExitRegion 이 안 올 수 있다.
+            // 이 경우 현재 상태 확인 단계에서 바로 기록 알림을 보낸다.
+            if region.identifier.contains(Self.leaveRegionMarker) {
+                sendLocalNotification(
+                    title: "面談記録の作成",
+                    body: "面談場所を離れました。記録を残してください。"
+                )
+            }
             print("regionState: outside / \(region.identifier)")
         case .unknown:
             print("regionState: unknown / \(region.identifier)")

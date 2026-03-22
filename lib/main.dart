@@ -39,16 +39,16 @@ class JgBusinessApp extends StatelessWidget {
         title: 'Jg Business',
         locale: const Locale('ja', 'JP'),
         supportedLocales: const [Locale('ja', 'JP'), Locale('en', 'US')],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: themeService.isDarkMode ? ThemeMode.dark : ThemeMode.light,
         getPages: AppPages.pages,
         initialRoute: AppRoutes.splash,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
       ),
     );
   }
@@ -63,4 +63,13 @@ class JgBusinessApp extends StatelessWidget {
 위치 권한/설정 화면 추가
 이탈 300m 후 기록 알림부터 먼저
 그 다음 도착 전 알림
+
+
+일단 ReminderConstants의 값을 유저가 수정할 수 있게 해주고 
+
+자동 알림 -> 9시 10시등에 알림을 등록해놓고, 오늘 일정을 확인하세요의 알림 보냄 (물론 알림 시간 ,알림 on/off 유저 설정 가능 )
+이 알림을 탭하면 오늘 일정 리스트 화면으로 이동.
+
+
+次のアクション 보다 次の予定를 작성이 나을수도 ?
  */

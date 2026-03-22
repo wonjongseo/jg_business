@@ -14,8 +14,10 @@ import 'package:jg_business/features/meeting/data/repositories/meeting_record_re
 import 'package:jg_business/features/meeting/data/repositories/meeting_status_repository.dart';
 import 'package:jg_business/features/spreadsheet_sync/data/datasources/google_sheets_remote_data_source.dart';
 import 'package:jg_business/features/spreadsheet_sync/data/repositories/spreadsheet_sync_repository.dart';
+import 'package:jg_business/shared/services/geofence_registration_service.dart';
 import 'package:jg_business/shared/services/location_resolver_service.dart';
 import 'package:jg_business/shared/services/notification_service.dart';
+import 'package:jg_business/shared/services/ios_geofence_channel_service.dart';
 
 class CalendarBinding extends Bindings {
   @override
@@ -39,6 +41,16 @@ class CalendarBinding extends Bindings {
     Get.lazyPut<NotificationService>(() => NotificationService(), fenix: true);
     Get.lazyPut<LocationResolverService>(
       () => LocationResolverService(),
+      fenix: true,
+    );
+    Get.lazyPut<IosGeofenceChannelService>(
+      () => IosGeofenceChannelService(),
+      fenix: true,
+    );
+    Get.lazyPut<GeofenceRegistrationService>(
+      () => GeofenceRegistrationService(
+        iosGeofenceChannelService: Get.find<IosGeofenceChannelService>(),
+      ),
       fenix: true,
     );
     Get.lazyPut<ClientFirestoreDataSource>(
@@ -101,6 +113,7 @@ class CalendarBinding extends Bindings {
         authController: Get.find<AuthController>(),
         meetingRecordRepository: Get.find<MeetingRecordRepository>(),
         meetingStatusRepository: Get.find<MeetingStatusRepository>(),
+        geofenceRegistrationService: Get.find<GeofenceRegistrationService>(),
       ),
       fenix: true,
     );
